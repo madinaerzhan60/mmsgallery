@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MMS Gallery - Sign In</title>
+<link rel="stylesheet" href="/css/theme.css">
+<style>
+.auth-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 20px 60px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 40px 36px;
+  box-shadow: var(--card-shadow-hover);
+}
+.auth-logo-area {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.auth-logo {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--accent-primary);
+  letter-spacing: -0.02em;
+}
+.auth-subtitle { 
+  font-size: 0.95rem; 
+  color: var(--text-muted); 
+  margin-top: 8px; 
+}
+.tabs { 
+  display: flex; 
+  gap: 0; 
+  margin-bottom: 28px; 
+  background: var(--bg-secondary); 
+  border-radius: var(--radius-sm); 
+  padding: 4px; 
+}
+.tab {
+  flex: 1;
+  padding: 12px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  color: var(--text-muted);
+  border: none;
+  background: none;
+}
+.tab.active { 
+  background: var(--accent-primary); 
+  color: white; 
+}
+.form-wrap { display: flex; flex-direction: column; gap: 18px; }
+.auth-footer { 
+  text-align: center; 
+  margin-top: 24px; 
+  font-size: 0.9rem; 
+  color: var(--text-muted); 
+}
+.auth-footer a { color: var(--accent-primary); text-decoration: none; font-weight: 500; }
+.auth-footer a:hover { text-decoration: underline; }
+.divider-line { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  margin: 8px 0; 
+}
+.divider-line span { flex: 1; height: 1px; background: var(--border-color); }
+.divider-line p { font-size: 0.75rem; color: var(--text-muted); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.error-msg { 
+  color: var(--danger); 
+  font-size: 0.85rem; 
+  font-weight: 500;
+  display: none;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: var(--radius-sm);
+}
+.error-msg.show { display: block; }
+.submit-btn { width: 100%; padding: 14px; font-size: 0.9rem; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="bg-shapes">
+  <div class="bg-shape bg-shape-1"></div>
+  <div class="bg-shape bg-shape-2"></div>
+  <div class="bg-shape bg-shape-3"></div>
+</div>
+<div class="page">
+  <nav>
+    <a href="/" class="nav-logo">mmsgallery<small>SDU Student Exhibition</small></a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/gallery">Gallery</a></li>
+    </ul>
+    <div class="nav-right" id="navRight"></div>
+  </nav>
+
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-logo-area">
+        <div class="auth-logo">mmsgallery</div>
+        <div class="auth-subtitle">SDU Student Exhibition Platform</div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" id="tabLogin" onclick="switchTab('login')">Login</button>
+        <button class="tab" id="tabRegister" onclick="switchTab('register')">Sign Up</button>
+      </div>
+      <div id="errorMsg" class="error-msg"></div>
+
+      <!-- Login form -->
+      <div id="loginForm" class="form-wrap">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input class="form-input" type="email" id="loginEmail" placeholder="your@university.edu" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" id="loginPass" placeholder="Enter your password" autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary submit-btn" onclick="doLogin()">Sign In</button>
+        <div class="divider-line"><span></span><p>or</p><span></span></div>
+        <button class="btn btn-ghost submit-btn" onclick="switchTab('register')">Create Account</button>
+      </div>
+
+      <!-- Register form -->
+      <div id="registerForm" class="form-wrap" style="display:none">
+        <div class="field-row">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input class="form-input" type="text" id="regName" placeholder="Your Name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Year</label>
+            <select class="form-select" id="regYear">
+              <option value="">Select Year</option>
+              <option value="1st Year">1st Year</option>
+              <option value="2nd Year">2nd Year</option>
+              <option value="3rd Year">3rd Year</option>
+              <option value="4th Year">4th Year</option>
+              <option value="Master">Master</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Major / Specialization</label>
+          <select class="form-select" id="regMajor">
+            <option value="">Select Major</option>
+            <option>Digital Art</option>
+            <option>Photography</option>
+            <option>3D and Motion Graphics</option>
+            <option>Illustration</option>
+            <option>Video and Film</option>
+            <option>Interactive Media</option>
+            <option>Graphic Design</option>
+            <option>Animation</option>
+            <option>Sound Design</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input class="form-input" type="email" id="regEmail" placeholder="your@university.edu">
+        </div>
+        <div class="field-row">
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input class="form-input" type="password" id="regPass" placeholder="Min. 6 chars">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm</label>
+            <input class="form-input" type="password" id="regPass2" placeholder="Repeat">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Short Bio (optional)</label>
+          <textarea class="form-textarea" id="regBio" placeholder="Tell us about yourself..." style="min-height:70px"></textarea>
+        </div>
+        <button class="btn btn-primary submit-btn" onclick="doRegister()">Create Account</button>
+        <div class="divider-line"><span></span><p>or</p><span></span></div>
+        <button class="btn btn-ghost submit-btn" onclick="switchTab('login')">Already have an account</button>
+      </div>
+
+      <div class="auth-footer">
+        <a href="/">Back to Gallery</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+// Redirect if already logged in
+if (isLoggedIn()) {
+  const user = getUser();
+  location.href = user?.role === 'admin' ? '/admin' : '/dashboard';
+}
+
+// Check URL param
+const urlMode = new URLSearchParams(location.search).get('mode');
+if (urlMode === 'register') switchTab('register');
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function hideError() { document.getElementById('errorMsg').classList.remove('show'); }
+
+function switchTab(tab) {
+  document.getElementById('loginForm').style.display = tab === 'login' ? 'flex' : 'none';
+  document.getElementById('registerForm').style.display = tab === 'register' ? 'flex' : 'none';
+  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+  hideError();
+}
+
+async function doLogin() {
+  hideError();
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPass').value;
+  if (!email || !password) { showError('Please fill in all fields'); return; }
+  try {
+    const res = await apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+    setAuth(res.token, res.user);
+    toast('Welcome back, ' + res.user.name + '!', 'success');
+    setTimeout(() => location.href = res.user.role === 'admin' ? '/admin' : '/dashboard', 800);
+  } catch(e) { showError(e.message); }
+}
+
+async function doRegister() {
+  hideError();
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPass').value;
+  const pass2 = document.getElementById('regPass2').value;
+  const major = document.getElementById('regMajor').value;
+  const year = document.getElementById('regYear').value;
+  const bio = document.getElementById('regBio').value.trim();
+  if (!name || !email || !password) { showError('Name, email and password are required'); return; }
+  if (password !== pass2) { showError('Passwords do not match'); return; }
+  if (password.length < 6) { showError('Password must be at least 6 characters'); return; }
+  try {
+    const res = await apiFetch('/api/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password, major, year, bio }) });
+    setAuth(res.token, res.user);
+    toast('Welcome to MMS Gallery, ' + res.user.name + '!', 'success');
+    setTimeout(() => location.href = '/dashboard', 800);
+  } catch(e) { showError(e.message); }
+}
+
+// Enter key support
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('loginForm').style.display !== 'none') doLogin();
+    else doRegister();
+  }
+});
+</script>
+</body>
+</html>

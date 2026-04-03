@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MMS Gallery - Admin Panel</title>
+<link rel="stylesheet" href="/css/theme.css">
+<style>
+.admin-layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+.admin-sidebar {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  padding: 80px 0 40px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.admin-logo { 
+  padding: 20px 24px 24px; 
+  border-bottom: 1px solid var(--border-color); 
+  margin-bottom: 12px; 
+}
+.admin-logo span { 
+  font-size: 0.7rem; 
+  font-weight: 600;
+  letter-spacing: 0.1em; 
+  text-transform: uppercase; 
+  color: var(--accent-primary); 
+  display: block; 
+  margin-top: 4px; 
+}
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  margin: 0 10px 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+.admin-nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.admin-nav-item.active { 
+  background: var(--accent-light); 
+  color: var(--accent-primary);
+}
+.badge-count { 
+  background: var(--accent-primary); 
+  color: white; 
+  padding: 2px 8px; 
+  border-radius: 12px; 
+  font-size: 0.7rem; 
+  font-weight: 700; 
+  margin-left: auto; 
+}
+
+.admin-main { padding: 85px 36px 60px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Stats */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 36px; }
+.stat-box { 
+  background: var(--card-bg); 
+  border: 1px solid var(--border-color); 
+  border-radius: var(--radius); 
+  padding: 24px 20px;
+}
+.stat-box-num { font-size: 2rem; font-weight: 800; color: var(--accent-primary); }
+.stat-box-label { 
+  font-size: 0.7rem; 
+  font-weight: 600;
+  letter-spacing: 0.1em; 
+  text-transform: uppercase; 
+  color: var(--text-muted); 
+  margin-top: 6px; 
+}
+
+/* Table */
+.admin-table-wrap { 
+  background: var(--card-bg); 
+  border: 1px solid var(--border-color); 
+  border-radius: var(--radius); 
+  overflow: hidden;
+}
+.admin-table { width: 100%; border-collapse: collapse; }
+.admin-table thead tr { 
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+}
+.admin-table th { 
+  padding: 14px 16px; 
+  font-size: 0.7rem; 
+  font-weight: 600;
+  letter-spacing: 0.1em; 
+  text-transform: uppercase; 
+  color: var(--text-muted); 
+  text-align: left; 
+  white-space: nowrap; 
+}
+.admin-table td { 
+  padding: 14px 16px; 
+  border-bottom: 1px solid var(--border-light); 
+  font-size: 0.9rem; 
+  vertical-align: middle; 
+}
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table tr:hover td { background: var(--bg-secondary); }
+.thumb { 
+  width: 50px; 
+  height: 40px; 
+  border-radius: var(--radius-sm); 
+  object-fit: cover; 
+  border: 1px solid var(--border-color); 
+  background: var(--bg-tertiary); 
+  display: block; 
+  overflow: hidden; 
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.thumb:hover {
+  transform: scale(1.05);
+  border-color: var(--accent-primary);
+}
+.artwork-title-link {
+  cursor: pointer;
+  color: var(--text-primary);
+  font-weight: 700;
+  transition: color 0.2s ease;
+}
+.artwork-title-link:hover {
+  color: var(--accent-primary);
+}
+.action-group { display: flex; gap: 8px; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+.modal-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+.modal-content {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  max-width: 700px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  background: var(--card-bg);
+  z-index: 10;
+}
+.modal-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+.modal-close-btn:hover {
+  color: var(--text-primary);
+}
+.modal-body {
+  padding: 24px;
+}
+.modal-image-container {
+  margin-bottom: 20px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  aspect-ratio: 4/3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-image-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.modal-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.modal-detail-item {
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+}
+.modal-detail-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.modal-detail-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.modal-description {
+  margin-top: 16px;
+}
+.modal-description-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  display: block;
+}
+.modal-description-text {
+  background: var(--bg-secondary);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  line-height: 1.6;
+  color: var(--text-primary);
+  min-height: 60px;
+}
+
+/* Modal Navigation Buttons */
+.modal-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  z-index: 999;
+}
+.modal-nav-btn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+.modal-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.modal-nav-btn.prev {
+  left: -60px;
+}
+.modal-nav-btn.next {
+  right: -60px;
+}
+
+.modal-with-nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Artist Link */
+.artist-link {
+  color: var(--accent-primary);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  font-weight: 600;
+}
+.artist-link:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+/* Modal Counter */
+.modal-counter {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  z-index: 1001;
+}
+
+/* Filter bar */
+.filter-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+.filter-bar input { 
+  background: var(--bg-secondary); 
+  border: 1px solid var(--border-color); 
+  color: var(--text-primary); 
+  padding: 10px 14px; 
+  border-radius: var(--radius-sm); 
+  font-family: inherit;
+  font-size: 0.9rem; 
+  outline: none; 
+  flex: 1; 
+  max-width: 280px; 
+  transition: border-color 0.3s ease;
+}
+.filter-bar input:focus { border-color: var(--accent-primary); }
+
+.page-heading { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.02em; }
+.page-heading em { font-style: normal; color: var(--accent-primary); }
+.page-subheading { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 28px; }
+
+@media(max-width:900px) {
+  .admin-layout { grid-template-columns: 1fr; }
+  .admin-sidebar { position: static; height: auto; padding: 80px 0 20px; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="bg-shapes">
+  <div class="bg-shape bg-shape-1"></div>
+  <div class="bg-shape bg-shape-2"></div>
+  <div class="bg-shape bg-shape-3"></div>
+</div>
+<div class="page">
+  <nav>
+    <a href="/" class="nav-logo">mmsgallery<small>Admin Panel</small></a>
+    <ul class="nav-links"><li><a href="/">Public Site</a></li></ul>
+    <div class="nav-right" id="navRight"></div>
+  </nav>
+
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <div class="admin-logo">
+        <div style="font-size:1.3rem;font-weight:800;color:var(--accent-primary)">mmsgallery</div>
+        <span>Administrator</span>
+      </div>
+      <nav style="flex:1">
+        <div class="admin-nav-item active" onclick="showPanel('dashboard')" data-panel="dashboard">Dashboard</div>
+        <div class="admin-nav-item" onclick="showPanel('artworks')" data-panel="artworks">Artworks <span id="pendingBadge" class="badge-count" style="display:none">0</span></div>
+        <div class="admin-nav-item" onclick="showPanel('users')" data-panel="users">Students</div>
+      </nav>
+      <div style="padding:20px 14px;border-top:1px solid var(--border-color)">
+        <a href="/dashboard" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">Student View</a>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="admin-main">
+      <!-- Dashboard -->
+      <div class="tab-panel active" id="panel-dashboard">
+        <h1 class="page-heading">Admin <em>Dashboard</em></h1>
+        <p class="page-subheading">Overview of the MMS Gallery platform.</p>
+        <div class="stats-row" id="statsRow">
+          <div class="stat-box"><div class="stat-box-num" id="stStudents">--</div><div class="stat-box-label">Students</div></div>
+          <div class="stat-box"><div class="stat-box-num" id="stArtworks">--</div><div class="stat-box-label">Artworks</div></div>
+          <div class="stat-box"><div class="stat-box-num" id="stPending">--</div><div class="stat-box-label">Pending Review</div></div>
+          <div class="stat-box"><div class="stat-box-num" id="stLikes">--</div><div class="stat-box-label">Total Likes</div></div>
+        </div>
+        <div style="display:flex;gap:24px;flex-wrap:wrap">
+          <div style="flex:1;min-width:280px">
+            <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:14px">Artwork Status</h3>
+            <div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:var(--radius);padding:24px">
+              <div id="breakdownBars"></div>
+            </div>
+          </div>
+          <div style="flex:1;min-width:280px">
+            <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:14px">Quick Actions</h3>
+            <div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:var(--radius);padding:24px;display:flex;flex-direction:column;gap:12px">
+              <button class="btn btn-primary" onclick="showPanel('artworks');filterStatus('pending')">Review Pending Works</button>
+              <button class="btn btn-ghost" onclick="showPanel('users')">View Students</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Artworks -->
+      <div class="tab-panel" id="panel-artworks">
+        <h1 class="page-heading">Manage <em>Artworks</em></h1>
+        <p class="page-subheading">Review, approve or reject student submissions.</p>
+        <div class="filter-bar">
+          <input type="text" id="artSearch" placeholder="Search by title or author..." oninput="filterArtworks()">
+          <div class="filters" id="artStatusFilters">
+            <button class="flt active" data-s="all" onclick="filterStatus('all')">All</button>
+            <button class="flt" data-s="pending" onclick="filterStatus('pending')">Pending</button>
+            <button class="flt" data-s="approved" onclick="filterStatus('approved')">Approved</button>
+            <button class="flt" data-s="rejected" onclick="filterStatus('rejected')">Rejected</button>
+          </div>
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead><tr>
+              <th>Image</th><th>Title</th><th>Artist</th><th>Category</th>
+              <th>Status</th><th>Likes</th><th>Date</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="artworksBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Users -->
+      <div class="tab-panel" id="panel-users">
+        <h1 class="page-heading">Manage <em>Students</em></h1>
+        <p class="page-subheading">All registered student accounts.</p>
+        <div class="filter-bar">
+          <input type="text" id="userSearch" placeholder="Search by name or email..." oninput="filterUsers()">
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead><tr><th>Name</th><th>Email</th><th>Major</th><th>Year</th><th>Works</th><th>Joined</th><th>Actions</th></tr></thead>
+            <tbody id="usersBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Artwork Viewer Modal -->
+<div id="modalOverlay" class="modal-overlay">
+  <div class="modal-with-nav">
+    <button id="prevBtn" class="modal-nav-btn prev" onclick="handlePrev()" title="Previous artwork">❮</button>
+    <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modalTitle">Artwork Details</h2>
+      <button class="modal-close-btn" onclick="handleCloseModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-image-container" id="modalImageContainer"></div>
+      <div class="modal-details">
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Artist</span>
+          <div class="modal-detail-value"><a href="#" id="modalArtistLink" class="artist-link">--</a></div>
+        </div>
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Category</span>
+          <div class="modal-detail-value" id="modalCategory">--</div>
+        </div>
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Status</span>
+          <div class="modal-detail-value" id="modalStatus">--</div>
+        </div>
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Likes</span>
+          <div class="modal-detail-value" id="modalLikes">0</div>
+        </div>
+      </div>
+      <div class="modal-description">
+        <label class="modal-description-label">Description</label>
+        <div class="modal-description-text" id="modalDescription">No description provided.</div>
+      </div>
+    </div>
+    <button id="nextBtn" class="modal-nav-btn next" onclick="handleNext()" title="Next artwork">❯</button>
+  </div>  <div class="modal-counter" id="modalCounter"></div></div>
+
+<script src="/js/app.js"></script>
+<script>
+if (!isLoggedIn() || getUser()?.role !== 'admin') location.href = '/auth';
+
+let allArtworksData = [], allUsersData = [], currentStatus = 'all';
+
+function showPanel(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.admin-nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + name)?.classList.add('active');
+  document.querySelector(`[data-panel="${name}"]`)?.classList.add('active');
+}
+
+// Stats
+async function loadStats() {
+  try {
+    const s = await apiFetch('/api/admin/stats');
+    document.getElementById('stStudents').textContent = s.users;
+    document.getElementById('stArtworks').textContent = s.artworks;
+    document.getElementById('stPending').textContent = s.pending;
+    document.getElementById('stLikes').textContent = s.likes;
+    if (s.pending > 0) {
+      const badge = document.getElementById('pendingBadge');
+      badge.textContent = s.pending;
+      badge.style.display = 'inline';
+    }
+    // Breakdown bars
+    const bars = document.getElementById('breakdownBars');
+    const items = [
+      { label: 'Approved', val: s.approved, total: s.artworks || 1, color: 'var(--success)' },
+      { label: 'Pending', val: s.pending, total: s.artworks || 1, color: 'var(--warning)' },
+      { label: 'Rejected', val: s.rejected, total: s.artworks || 1, color: 'var(--danger)' },
+    ];
+    bars.innerHTML = items.map(i => `
+      <div style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">
+          <span>${i.label}</span><span>${i.val}</span>
+        </div>
+        <div style="height:8px;background:var(--bg-tertiary);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${Math.round(i.val / i.total * 100)}%;background:${i.color};border-radius:4px;transition:width 0.6s ease"></div>
+        </div>
+      </div>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+// Artworks
+async function loadArtworks() {
+  try {
+    allArtworksData = await apiFetch('/api/admin/artworks');
+    renderArtworks(allArtworksData);
+  } catch(e) { console.error(e); }
+}
+
+function filterStatus(s) {
+  currentStatus = s;
+  document.querySelectorAll('#artStatusFilters .flt').forEach(b => {
+    b.classList.toggle('active', b.dataset.s === s);
+  });
+  filterArtworks();
+}
+
+function filterArtworks() {
+  const q = document.getElementById('artSearch')?.value.toLowerCase() || '';
+  let data = allArtworksData;
+  if (currentStatus !== 'all') data = data.filter(a => a.status === currentStatus);
+  if (q) data = data.filter(a => a.title.toLowerCase().includes(q) || a.author_name?.toLowerCase().includes(q));
+  renderArtworks(data);
+}
+
+function renderArtworks(data) {
+  const tbody = document.getElementById('artworksBody');
+  tbody.innerHTML = data.length ? data.map(a => `
+    <tr>
+      <td><div class="thumb" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">${a.image_url ? `<img src="${a.image_url}" style="width:100%;height:100%;object-fit:cover">` : artSVG(a.id, 50, 40)}</div></td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span class="artwork-title-link" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">${a.title}</span></td>
+      <td style="color:var(--text-muted)">${a.author_name || '--'}</td>
+      <td><span class="badge badge-gray">${a.category}</span></td>
+      <td><span class="badge ${a.status === 'approved' ? 'badge-green' : a.status === 'rejected' ? 'badge-red' : 'badge-yellow'}">${a.status}</span></td>
+      <td style="color:var(--accent-primary)">${a.likes || 0}</td>
+      <td style="color:var(--text-muted);font-size:0.85rem">${new Date(a.created_at).toLocaleDateString()}</td>
+      <td><div class="action-group">
+        ${a.status !== 'approved' ? `<button class="btn btn-success btn-sm" onclick="setStatus(${a.id},'approved')">Approve</button>` : ''}
+        ${a.status !== 'rejected' ? `<button class="btn btn-danger btn-sm" onclick="setStatus(${a.id},'rejected')">Reject</button>` : ''}
+        ${a.featured ? `<button class="btn btn-ghost btn-sm" onclick="setFeatured(${a.id},0)">Unfeature</button>` :
+          `<button class="btn btn-ghost btn-sm" onclick="setFeatured(${a.id},1)">Feature</button>`}
+      </div></td>
+    </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);font-style:italic">No artworks found.</td></tr>';
+}
+
+async function setStatus(id, status) {
+  try {
+    await apiFetch('/api/admin/artworks/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
+    toast('Status updated to ' + status, 'success');
+    loadArtworks();
+    loadStats();
+  } catch(e) { toast(e.message, 'error'); }
+}
+async function setFeatured(id, featured) {
+  try {
+    await apiFetch('/api/admin/artworks/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status: allArtworksData.find(a => a.id === id)?.status || 'approved', featured }) });
+    toast(featured ? 'Artwork featured!' : 'Artwork unfeatured', 'success');
+    loadArtworks();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// Users
+async function loadUsers() {
+  try {
+    allUsersData = await apiFetch('/api/admin/users');
+    renderUsers(allUsersData);
+  } catch {}
+}
+function filterUsers() {
+  const q = document.getElementById('userSearch').value.toLowerCase();
+  renderUsers(q ? allUsersData.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)) : allUsersData);
+}
+function renderUsers(data) {
+  document.getElementById('usersBody').innerHTML = data.filter(u => u.role !== 'admin').map(u => `
+    <tr>
+      <td style="font-weight:700">${u.name}</td>
+      <td style="color:var(--text-muted);font-size:0.85rem">${u.email}</td>
+      <td>${u.major || '--'}</td>
+      <td>${u.year || '--'}</td>
+      <td style="color:var(--accent-primary)">${u.artwork_count || 0}</td>
+      <td style="color:var(--text-muted);font-size:0.85rem">${new Date(u.created_at).toLocaleDateString()}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id},'${u.name}')">Remove</button></td>
+    </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);font-style:italic">No students yet.</td></tr>';
+}
+async function deleteUser(id, name) {
+  if (!confirm(`Remove student "${name}"? All their artworks will be deleted.`)) return;
+  try {
+    await apiFetch('/api/admin/users/' + id, { method: 'DELETE' });
+    toast('Student removed', 'success');
+    loadUsers();
+    loadStats();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// Modal State
+let isOpen = false;
+let selectedArtwork = null;
+let currentArtworkIndex = -1;
+let displayedArtworks = [];
+
+// Modal Functions
+function handleOpenModal(artwork) {
+  selectedArtwork = artwork;
+  isOpen = true;
+  
+  // Find current index in displayed artworks
+  displayedArtworks = Array.from(document.querySelectorAll('#artworksBody tr')).map((row, idx) => {
+    const titleCell = row.querySelector('td:nth-child(2)');
+    return { id: artwork.id, el: row };
+  }).filter(a => a.id !== null);
+  
+  // Get the filtered list of visible artworks
+  const searchInput = document.getElementById('artSearch')?.value.toLowerCase() || '';
+  let filteredData = allArtworksData;
+  if (currentStatus !== 'all') filteredData = filteredData.filter(a => a.status === currentStatus);
+  if (searchInput) filteredData = filteredData.filter(a => a.title.toLowerCase().includes(searchInput) || a.author_name?.toLowerCase().includes(searchInput));
+  
+  currentArtworkIndex = filteredData.findIndex(a => a.id === artwork.id);
+  
+  // Fill modal content
+  document.getElementById('modalTitle').textContent = artwork.title || 'Artwork';
+  document.getElementById('modalCategory').textContent = artwork.category || '--';
+  document.getElementById('modalStatus').innerHTML = `<span class="badge ${artwork.status === 'approved' ? 'badge-green' : artwork.status === 'rejected' ? 'badge-red' : 'badge-yellow'}">${artwork.status}</span>`;
+  document.getElementById('modalLikes').textContent = artwork.likes || 0;
+  document.getElementById('modalDescription').textContent = artwork.description || 'No description provided.';
+  
+  // Set artist link with profile URL
+  const artistLink = document.getElementById('modalArtistLink');
+  if (artwork.author_uuid) {
+    artistLink.href = `/artist/${artwork.author_uuid}`;
+    artistLink.textContent = artwork.author_name || '--';
+    artistLink.style.pointerEvents = 'auto';
+  } else {
+    artistLink.href = '#';
+    artistLink.textContent = artwork.author_name || '--';
+    artistLink.style.pointerEvents = 'none';
+  }
+  
+  // Set image
+  const imageContainer = document.getElementById('modalImageContainer');
+  if (artwork.image_url) {
+    imageContainer.innerHTML = `<img src="${artwork.image_url}" alt="${artwork.title}">`;
+  } else {
+    imageContainer.innerHTML = artSVG(artwork.id, 500, 400);
+  }
+  
+  // Update navigation buttons visibility
+  updateNavButtons(filteredData.length);
+  
+  const overlay = document.getElementById('modalOverlay');
+  overlay.classList.add('open');
+}
+
+function updateNavButtons(totalCount) {
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const counter = document.getElementById('modalCounter');
+  
+  prevBtn.disabled = currentArtworkIndex <= 0;
+  nextBtn.disabled = currentArtworkIndex >= totalCount - 1;
+  counter.textContent = `${currentArtworkIndex + 1} / ${totalCount}`;
+}
+
+function handleNext() {
+  if (currentArtworkIndex === -1) return;
+  
+  // Get filtered artworks
+  const searchInput = document.getElementById('artSearch')?.value.toLowerCase() || '';
+  let filteredData = allArtworksData;
+  if (currentStatus !== 'all') filteredData = filteredData.filter(a => a.status === currentStatus);
+  if (searchInput) filteredData = filteredData.filter(a => a.title.toLowerCase().includes(searchInput) || a.author_name?.toLowerCase().includes(searchInput));
+  
+  if (currentArtworkIndex < filteredData.length - 1) {
+    currentArtworkIndex++;
+    handleOpenModal(filteredData[currentArtworkIndex]);
+  }
+}
+
+function handlePrev() {
+  if (currentArtworkIndex === -1) return;
+  
+  // Get filtered artworks
+  const searchInput = document.getElementById('artSearch')?.value.toLowerCase() || '';
+  let filteredData = allArtworksData;
+  if (currentStatus !== 'all') filteredData = filteredData.filter(a => a.status === currentStatus);
+  if (searchInput) filteredData = filteredData.filter(a => a.title.toLowerCase().includes(searchInput) || a.author_name?.toLowerCase().includes(searchInput));
+  
+  if (currentArtworkIndex > 0) {
+    currentArtworkIndex--;
+    handleOpenModal(filteredData[currentArtworkIndex]);
+  }
+}
+
+function handleCloseModal() {
+  isOpen = false;
+  selectedArtwork = null;
+  const overlay = document.getElementById('modalOverlay');
+  overlay.classList.remove('open');
+}
+
+// Close modal on overlay click
+document.addEventListener('DOMContentLoaded', () => {
+  const overlay = document.getElementById('modalOverlay');
+  overlay?.addEventListener('click', (e) => {
+    if (e.target === overlay) handleCloseModal();
+  });
+  // Close on Escape key and navigate with arrow keys
+  document.addEventListener('keydown', (e) => {
+    if (!isOpen) return;
+    if (e.key === 'Escape') handleCloseModal();
+    if (e.key === 'ArrowLeft') handlePrev();
+    if (e.key === 'ArrowRight') handleNext();
+  });
+});
+
+// Init
+loadStats();
+loadArtworks();
+loadUsers();
+</script>
+</body>
+</html>

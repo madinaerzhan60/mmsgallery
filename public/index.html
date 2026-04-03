@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MMS Gallery - Student Multimedia Exhibition</title>
+<link rel="stylesheet" href="/css/theme.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap');
+
+/* Custom Logo */
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: conic-gradient(from 210deg, #2563eb, #0ea5e9, #22c55e, #f59e0b, #2563eb);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+  position: relative;
+}
+.brand-mark::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+}
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+.brand-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.brand-sub {
+  margin-top: 4px;
+  font-size: 0.62rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-primary);
+  font-weight: 700;
+}
+
+/* Hero */
+.hero {
+  min-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 120px 48px 80px;
+  position: relative;
+}
+.hero-eyebrow {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-primary);
+  margin-bottom: 20px;
+  opacity: 0;
+  animation: fadeUp 0.8s 0.3s ease forwards;
+}
+.hero-title {
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  opacity: 0;
+  animation: fadeUp 0.9s 0.5s ease forwards;
+}
+.hero-shell {
+  max-width: 980px;
+  width: 100%;
+  padding: 28px 24px;
+  border-radius: 26px;
+  border: 1px solid var(--border-color);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--card-bg) 88%, #ffffff 12%), var(--card-bg));
+  box-shadow: var(--card-shadow-hover);
+  position: relative;
+  overflow: hidden;
+}
+.hero-shell::before {
+  content: '';
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(14,165,233,0.2), transparent 68%);
+  top: -120px;
+  right: -80px;
+}
+.hero-title em {
+  font-style: normal;
+  color: var(--accent-primary);
+}
+.hero-ribbon {
+  margin: 18px auto 0;
+  border: 1px dashed var(--border-color);
+  width: fit-content;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--bg-secondary);
+}
+.hero-sub {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  margin-top: 24px;
+  max-width: 520px;
+  line-height: 1.7;
+  opacity: 0;
+  animation: fadeUp 0.9s 0.7s ease forwards;
+}
+.hero-btns {
+  display: flex;
+  gap: 16px;
+  margin-top: 40px;
+  flex-wrap: wrap;
+  justify-content: center;
+  opacity: 0;
+  animation: fadeUp 0.9s 0.9s ease forwards;
+}
+.hero-stats {
+  display: flex;
+  gap: 60px;
+  margin-top: 80px;
+  opacity: 0;
+  animation: fadeUp 0.9s 1.1s ease forwards;
+}
+.hero-chips {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 22px;
+  flex-wrap: wrap;
+}
+.hero-chip {
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+.stat-num { 
+  font-size: 2.5rem; 
+  font-weight: 800; 
+  color: var(--accent-primary); 
+  line-height: 1; 
+}
+.stat-label { 
+  font-size: 0.75rem; 
+  font-weight: 600;
+  letter-spacing: 0.1em; 
+  text-transform: uppercase; 
+  color: var(--text-muted); 
+  margin-top: 8px; 
+}
+@keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Masonry Gallery */
+.masonry { columns: 4; column-gap: 16px; }
+.m-item {
+  break-inside: avoid;
+  margin-bottom: 16px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.m-item:hover { 
+  transform: translateY(-4px); 
+  box-shadow: var(--card-shadow-hover);
+  border-color: var(--accent-primary);
+}
+.m-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 40px 14px 14px;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: all 0.3s ease;
+}
+.m-item:hover .m-info { opacity: 1; transform: translateY(0); }
+.m-name { font-size: 0.95rem; font-weight: 700; color: white; }
+.m-author { font-size: 0.75rem; color: rgba(255,255,255,0.7); margin-top: 4px; }
+
+/* Artists */
+.artists-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.artist-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.artist-card:hover { 
+  border-color: var(--accent-primary);
+  transform: translateY(-4px);
+  box-shadow: var(--card-shadow-hover);
+}
+.a-ring { 
+  width: 80px; 
+  height: 80px; 
+  border-radius: 50%; 
+  margin: 0 auto 16px; 
+  position: relative;
+  border: 3px solid var(--accent-primary);
+  overflow: hidden;
+}
+.a-img { 
+  width: 100%; 
+  height: 100%; 
+  border-radius: 50%; 
+  display: block; 
+  object-fit: cover;
+}
+.a-name { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+.a-major { 
+  font-size: 0.7rem; 
+  font-weight: 600;
+  letter-spacing: 0.1em; 
+  text-transform: uppercase; 
+  color: var(--accent-primary); 
+  margin: 6px 0 12px; 
+}
+.a-count { font-size: 0.9rem; color: var(--text-muted); }
+
+/* Artists modal */
+.artists-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.artists-modal.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.artists-modal-card {
+  width: min(980px, 94vw);
+  max-height: 86vh;
+  overflow: auto;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--card-shadow-hover);
+}
+.artists-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  background: var(--card-bg);
+  z-index: 2;
+}
+.artists-modal-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.artists-toolbar {
+  display: flex;
+  gap: 10px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+}
+.artists-search {
+  flex: 1;
+  min-width: 220px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: inherit;
+}
+.artists-major {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: inherit;
+}
+.artists-list {
+  padding: 18px 22px 22px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.artist-mini {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+  padding: 16px;
+}
+.artist-mini .a-name {
+  margin-top: 10px;
+}
+.artist-mini .btn {
+  margin-top: 12px;
+  width: 100%;
+  justify-content: center;
+}
+
+/* CTA banner */
+.cta-band { 
+  padding: 80px 48px; 
+  text-align: center; 
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+.cta-band h2 { 
+  font-size: clamp(1.8rem, 4vw, 2.8rem); 
+  font-weight: 800; 
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+}
+.cta-band p { 
+  font-size: 1.1rem; 
+  color: var(--text-muted); 
+  max-width: 480px; 
+  margin: 0 auto 32px; 
+  line-height: 1.7; 
+}
+.cta-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+/* Lightbox */
+.lb { 
+  position: fixed; 
+  inset: 0; 
+  z-index: 200; 
+  background: rgba(0,0,0,0.9);
+  backdrop-filter: blur(10px);
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  opacity: 0; 
+  pointer-events: none; 
+  transition: opacity 0.3s ease;
+}
+.lb.open { opacity: 1; pointer-events: all; }
+.lb-inner { 
+  max-width: 900px; 
+  width: 90%; 
+  display: grid; 
+  grid-template-columns: 1.3fr 1fr; 
+  gap: 0; 
+  background: var(--card-bg); 
+  border-radius: var(--radius-lg); 
+  overflow: hidden; 
+  border: 1px solid var(--border-color);
+  transform: scale(0.95); 
+  transition: transform 0.3s ease;
+}
+.lb.open .lb-inner { transform: scale(1); }
+.lb-img-wrap { min-height: 400px; background: var(--bg-tertiary); }
+.lb-details { padding: 32px; display: flex; flex-direction: column; }
+.lb-cat { 
+  font-size: 0.7rem; 
+  font-weight: 600;
+  letter-spacing: 0.15em; 
+  text-transform: uppercase; 
+  color: var(--accent-primary); 
+  margin-bottom: 10px; 
+}
+.lb-title { font-size: 1.6rem; font-weight: 800; line-height: 1.2; margin-bottom: 12px; }
+.lb-desc { font-size: 0.95rem; line-height: 1.7; color: var(--text-muted); flex: 1; }
+.lb-meta { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); }
+.lb-author-name { font-size: 1rem; font-weight: 700; }
+.lb-author-sub { font-size: 0.85rem; color: var(--text-muted); }
+.lb-likes { margin-top: 16px; display: flex; gap: 12px; align-items: center; }
+.lb-close { 
+  position: absolute; 
+  top: 20px; 
+  right: 20px; 
+  background: var(--card-bg); 
+  border: 1px solid var(--border-color); 
+  color: var(--text-primary); 
+  width: 44px; 
+  height: 44px; 
+  border-radius: 50%; 
+  font-size: 1.2rem; 
+  cursor: pointer; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  transition: all 0.3s ease;
+}
+.lb-close:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+.lb-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  font-size: 1.4rem;
+  font-weight: 600;
+  z-index: 10;
+}
+.lb-nav:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  background: var(--accent-light);
+}
+.lb-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.lb-nav:disabled:hover {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+  background: var(--card-bg);
+}
+.lb-prev { left: 20px; }
+.lb-next { right: 80px; }
+.lb-counter {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.comments-box { margin-top: 16px; max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.comment-item { background: var(--bg-secondary); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 0.85rem; }
+.comment-author { font-weight: 700; color: var(--accent-primary); font-size: 0.75rem; }
+.comment-form { display: flex; gap: 8px; margin-top: 8px; }
+.comment-form input { 
+  flex: 1; 
+  background: var(--bg-secondary); 
+  border: 1px solid var(--border-color); 
+  color: var(--text-primary); 
+  padding: 8px 12px; 
+  border-radius: var(--radius-sm); 
+  font-family: inherit; 
+  font-size: 0.9rem; 
+  outline: none; 
+}
+.comment-form input:focus { border-color: var(--accent-primary); }
+
+/* Upload Button (for logged in users) */
+.upload-btn-hero {
+  display: none;
+  margin-top: 24px;
+  opacity: 0;
+  animation: fadeUp 0.9s 1s ease forwards;
+}
+.upload-btn-hero.show { display: block; }
+
+/* Motion strip */
+.idea-strip {
+  margin: -26px 48px 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-secondary);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.idea-track {
+  display: inline-flex;
+  gap: 34px;
+  padding: 10px 0;
+  animation: moveIdeas 22s linear infinite;
+}
+.idea-pill {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+@keyframes moveIdeas {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@media(max-width:1100px) { .masonry { columns: 3; } .artists-row { grid-template-columns: repeat(2, 1fr); } }
+@media(max-width:768px) { .masonry { columns: 2; } .lb-inner { grid-template-columns: 1fr; } .hero { padding: 100px 24px 60px; } .hero-shell { padding: 20px 14px; border-radius: 18px; } .idea-strip { margin: -10px 20px 10px; } .hero-stats { gap: 24px; } .artists-list { grid-template-columns: 1fr; } .lb-nav { width: 40px; height: 40px; font-size: 1.1rem; } .lb-prev { left: 10px; } .lb-next { right: 60px; } }
+@media(max-width:480px) { .masonry { columns: 1; } }
+</style>
+</head>
+<body>
+<div class="bg-shapes">
+  <div class="bg-shape bg-shape-1"></div>
+  <div class="bg-shape bg-shape-2"></div>
+  <div class="bg-shape bg-shape-3"></div>
+</div>
+<div class="page">
+  <!-- Lightbox -->
+  <div class="lb" id="lb">
+    <button class="lb-nav lb-prev" id="lbPrev" onclick="prevArtwork()">&#8249;</button>
+    <div class="lb-inner">
+      <div class="lb-img-wrap" id="lbImgWrap"></div>
+      <div class="lb-details">
+        <div class="lb-cat" id="lbCat"></div>
+        <div class="lb-title" id="lbTitle"></div>
+        <div class="lb-desc" id="lbDesc"></div>
+        <div class="lb-meta">
+          <div>
+            <a href="#" class="lb-author-name lb-author-link" id="lbAuthor" style="text-decoration:none;color:var(--text-primary);cursor:pointer;"></a>
+            <div class="lb-author-sub" id="lbAuthorSub"></div>
+          </div>
+        </div>
+        <div class="lb-likes">
+          <button class="btn btn-ghost btn-sm" id="lbLikeBtn" onclick="toggleLike()">Like</button>
+          <span id="lbLikeCount" style="font-size:0.8rem;color:var(--text-muted)"></span>
+        </div>
+        <div class="comments-box" id="commentsBox"></div>
+        <div class="comment-form" id="commentForm" style="display:none">
+          <input type="text" id="commentInput" placeholder="Add a comment...">
+          <button class="btn btn-primary btn-sm" onclick="postComment()">Post</button>
+        </div>
+      </div>
+    </div>
+    <button class="lb-nav lb-next" id="lbNext" onclick="nextArtwork()">&#8250;</button>
+    <button class="lb-close" onclick="closeLb()">x</button>
+    <div class="lb-counter" id="lbCounter"></div>
+  </div>
+
+  <!-- Nav -->
+  <nav>
+    <a href="/" class="brand-logo">
+      <span class="brand-mark"></span>
+      <span class="brand-text">
+        <span class="brand-title">mmsgallery</span>
+        <span class="brand-sub">student media lab</span>
+      </span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="/#gallery">Gallery</a></li>
+      <li><a href="/#artists">Artists</a></li>
+    </ul>
+    <div class="nav-right" id="navRight"></div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-shell">
+      <p class="hero-eyebrow">SDU University - Student Works</p>
+      <h1 class="hero-title">Not Just a Gallery.<br>It is a <em>Creative Pulse</em>.</h1>
+      <p class="hero-sub">Discover bold student projects across digital art, photography, 3D, video and interactive media.</p>
+      <div class="hero-ribbon">Curated by students, powered by imagination</div>
+      <div class="hero-chips">
+        <span class="hero-chip">Digital Art</span>
+        <span class="hero-chip">3D Motion</span>
+        <span class="hero-chip">Photography</span>
+        <span class="hero-chip">Interactive</span>
+      </div>
+      <div class="hero-btns">
+        <button class="btn-gallery" onclick="location.href='/gallery'">Explore More</button>
+      </div>
+    </div>
+    <div class="upload-btn-hero" id="uploadBtnHero">
+      <a href="/dashboard?tab=submit" class="btn btn-ghost btn-lg">Upload Your Work</a>
+    </div>
+    <div class="hero-stats" id="heroStats">
+      <div class="stat"><div class="stat-num" id="statWorks">--</div><div class="stat-label">Projects</div></div>
+      <div class="stat"><div class="stat-num" id="statArtists">--</div><div class="stat-label">Students</div></div>
+      <div class="stat"><div class="stat-num">6</div><div class="stat-label">Categories</div></div>
+    </div>
+  </section>
+
+  <section class="idea-strip" aria-label="Creative categories">
+    <div class="idea-track">
+      <span class="idea-pill">Digital Illustration</span>
+      <span class="idea-pill">Experimental Film</span>
+      <span class="idea-pill">3D Motion Graphics</span>
+      <span class="idea-pill">Generative Design</span>
+      <span class="idea-pill">Interactive Stories</span>
+      <span class="idea-pill">Photo Essays</span>
+      <span class="idea-pill">Digital Illustration</span>
+      <span class="idea-pill">Experimental Film</span>
+      <span class="idea-pill">3D Motion Graphics</span>
+      <span class="idea-pill">Generative Design</span>
+      <span class="idea-pill">Interactive Stories</span>
+      <span class="idea-pill">Photo Essays</span>
+    </div>
+  </section>
+
+  <!-- Gallery -->
+  <section class="section" id="gallery">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:40px;">
+      <div>
+        <div class="section-eyebrow">Student Portfolio</div>
+        <h2 class="section-title">The <em>Gallery</em></h2>
+      </div>
+      <a href="/gallery" class="btn btn-ghost btn-sm">View All</a>
+    </div>
+    <div class="filters" id="galleryFilters"></div>
+    <div class="masonry" id="masonryGrid" style="margin-top:24px"></div>
+  </section>
+
+  <!-- Artists -->
+  <section class="section" id="artists">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:40px;">
+      <div>
+        <div class="section-eyebrow">Creative Minds</div>
+        <h2 class="section-title">Student <em>Spotlight</em></h2>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="openArtistsModal()">View More Artists</button>
+    </div>
+    <div class="artists-row" id="artistsRow"></div>
+  </section>
+
+  <div class="artists-modal" id="artistsModal" aria-hidden="true">
+    <div class="artists-modal-card">
+      <div class="artists-modal-head">
+        <div class="artists-modal-title">Discover Artists</div>
+        <button class="btn btn-ghost btn-sm" onclick="closeArtistsModal()">Close</button>
+      </div>
+      <div class="artists-toolbar">
+        <input id="artistsSearch" class="artists-search" type="text" placeholder="Search by name, major, year" oninput="filterArtistsModal()">
+        <select id="artistsMajor" class="artists-major" onchange="filterArtistsModal()">
+          <option value="all">All Majors</option>
+        </select>
+      </div>
+      <div id="artistsModalList" class="artists-list"></div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <section class="cta-band">
+    <div class="section-eyebrow" style="margin-bottom:14px;">Join the Gallery</div>
+    <h2>Share Your <em style="color:var(--accent-primary)">Creative Work</em></h2>
+    <p>All SDU students are invited to submit their projects and artworks to the gallery.</p>
+    <div class="cta-row">
+      <a href="/auth?mode=register" class="btn btn-primary btn-lg">Submit Your Work</a>
+      <a href="/gallery" class="btn btn-ghost btn-lg">Explore Gallery</a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-content">
+      <div class="footer-col">
+        <h4>About</h4>
+        <p>MMS Gallery is the official student multimedia exhibition platform for SDU University, showcasing creative digital works from our talented students.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <p>Have questions or need assistance?</p>
+        <p style="margin-top:8px"><a href="mailto:info@sdu.edu.kz">Contact Us</a></p>
+      </div>
+      <div class="footer-col">
+        <h4>Address</h4>
+        <address>SDU University<br>Almaty, Abylai Khan str. 1/1<br>Kaskelen 040900</address>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>2025 MMS Gallery - SDU University</span>
+    </div>
+  </footer>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const CATS = ['all','digital','photography','3d','illustration','video','interactive'];
+let currentArtwork = null;
+let currentIndex = -1;
+let allArtistsData = [];
+
+function scrollTo(sel) { document.querySelector(sel)?.scrollIntoView({behavior:'smooth'}); }
+
+// Show upload button if logged in
+function checkUploadBtn() {
+  if (isLoggedIn()) {
+    document.getElementById('uploadBtnHero')?.classList.add('show');
+  }
+}
+
+// Stats
+async function loadStats() {
+  try {
+    const [artworks, artists] = await Promise.all([
+      apiFetch('/api/artworks?limit=1'),
+      apiFetch('/api/artists')
+    ]);
+    animateNum('statWorks', artworks.length < 20 ? artworks.length : artworks.length);
+    animateNum('statArtists', artists.length || 0);
+  } catch {}
+}
+function animateNum(id, target) {
+  let n = 0;
+  const el = document.getElementById(id);
+  if (!el) return;
+  const step = Math.max(1, Math.ceil(target / 30));
+  const t = setInterval(() => { 
+    n = Math.min(n + step, target); 
+    el.textContent = n; 
+    if (n >= target) clearInterval(t); 
+  }, 40);
+}
+
+// Gallery
+let allArts = [];
+async function loadGallery(cat = 'all') {
+  try {
+    const url = cat === 'all' ? '/api/artworks?limit=20' : `/api/artworks?category=${cat}&limit=20`;
+    allArts = await apiFetch(url);
+    renderMasonry(allArts);
+  } catch(e) { console.error(e); }
+}
+function renderMasonry(arts) {
+  const grid = document.getElementById('masonryGrid');
+  const hs = [180, 240, 200, 160, 280, 220, 190, 250, 170, 230];
+  grid.innerHTML = '';
+  if (!arts.length) {
+    grid.innerHTML = '<p style="color:var(--text-muted);font-style:italic;padding:40px 0">No works found.</p>';
+    return;
+  }
+  arts.forEach((a, i) => {
+    const item = document.createElement('div');
+    item.className = 'reveal m-item';
+    const imgHtml = a.image_url
+      ? `<img src="${a.image_url}" style="width:100%;display:block;max-height:280px;object-fit:cover">`
+      : artSVG(a.id, 300, hs[i % hs.length]);
+    item.innerHTML = `${imgHtml}
+      <div class="m-info">
+        <div class="m-name">${a.title}</div>
+        <div class="m-author">${a.author?.name || ''} - ${a.category}</div>
+      </div>`;
+    item.addEventListener('click', () => openLb(a, i));
+    grid.appendChild(item);
+  });
+  initReveal();
+}
+function buildFilters() {
+  const container = document.getElementById('galleryFilters');
+  CATS.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'flt' + (c === 'all' ? ' active' : '');
+    btn.textContent = c === 'all' ? 'All Works' : c.charAt(0).toUpperCase() + c.slice(1);
+    btn.onclick = () => {
+      container.querySelectorAll('.flt').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadGallery(c);
+    };
+    container.appendChild(btn);
+  });
+}
+
+// Artists
+async function loadArtists() {
+  try {
+    const artists = await apiFetch('/api/artists');
+    allArtistsData = artists;
+    const row = document.getElementById('artistsRow');
+    row.innerHTML = '';
+    artists.slice(0, 4).forEach((a, i) => {
+      const card = document.createElement('div');
+      card.className = 'reveal artist-card';
+      card.innerHTML = `
+        <div class="a-ring"><svg viewBox="0 0 80 80" class="a-img" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="40" cy="40" r="40" fill="var(--bg-tertiary)"/>
+          <circle cx="40" cy="32" r="13" fill="var(--border-color)"/>
+          <ellipse cx="40" cy="62" rx="20" ry="14" fill="var(--border-color)"/>
+        </svg></div>
+        <div class="a-name">${a.name}</div>
+        <div class="a-major">${a.major || 'Multimedia Arts'}</div>
+        <div class="a-count"><strong>${a.artwork_count}</strong> works</div>
+      `;
+      card.onclick = () => location.href = `/artist/${a.uuid}`;
+      row.appendChild(card);
+    });
+    buildArtistsMajorFilter();
+    renderArtistsModal(artists);
+    initReveal();
+  } catch(e) { console.error(e); }
+}
+
+function buildArtistsMajorFilter() {
+  const majorSelect = document.getElementById('artistsMajor');
+  if (!majorSelect) return;
+  const majors = Array.from(new Set(allArtistsData.map(a => (a.major || '').trim()).filter(Boolean))).sort();
+  majorSelect.innerHTML = '<option value="all">All Majors</option>' + majors.map(m => `<option value="${m}">${m}</option>`).join('');
+}
+
+function renderArtistsModal(artists) {
+  const list = document.getElementById('artistsModalList');
+  if (!list) return;
+  if (!artists.length) {
+    list.innerHTML = '<p style="grid-column:1/-1;color:var(--text-muted);font-style:italic;padding:8px 0">No artists found.</p>';
+    return;
+  }
+  list.innerHTML = artists.map(a => `
+    <article class="artist-mini">
+      <div class="a-ring"><svg viewBox="0 0 80 80" class="a-img" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="40" cy="40" r="40" fill="var(--bg-tertiary)"/>
+        <circle cx="40" cy="32" r="13" fill="var(--border-color)"/>
+        <ellipse cx="40" cy="62" rx="20" ry="14" fill="var(--border-color)"/>
+      </svg></div>
+      <div class="a-name">${a.name}</div>
+      <div class="a-major">${a.major || 'Multimedia Arts'}</div>
+      <div class="a-count"><strong>${a.artwork_count || 0}</strong> works</div>
+      <button class="btn btn-primary btn-sm" onclick="location.href='/artist/${a.uuid}'">View Profile</button>
+    </article>
+  `).join('');
+}
+
+function filterArtistsModal() {
+  const q = (document.getElementById('artistsSearch')?.value || '').trim().toLowerCase();
+  const major = document.getElementById('artistsMajor')?.value || 'all';
+  let data = [...allArtistsData];
+  if (major !== 'all') data = data.filter(a => (a.major || '') === major);
+  if (q) {
+    data = data.filter(a =>
+      (a.name || '').toLowerCase().includes(q) ||
+      (a.major || '').toLowerCase().includes(q) ||
+      (a.year || '').toLowerCase().includes(q)
+    );
+  }
+  renderArtistsModal(data);
+}
+
+function openArtistsModal() {
+  const modal = document.getElementById('artistsModal');
+  if (!modal) return;
+  filterArtistsModal();
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeArtistsModal() {
+  const modal = document.getElementById('artistsModal');
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+// Lightbox
+function openLb(a, index) {
+  currentArtwork = a;
+  currentIndex = index !== undefined ? index : allArts.findIndex(x => x.uuid === a.uuid);
+  document.getElementById('lbCat').textContent = a.category;
+  document.getElementById('lbTitle').textContent = a.title;
+  document.getElementById('lbDesc').textContent = a.description || '';
+  const authorEl = document.getElementById('lbAuthor');
+  authorEl.textContent = a.author?.name || 'Unknown';
+  authorEl.href = a.author?.uuid ? '/artist/' + a.author.uuid : '#';
+  authorEl.style.color = 'var(--accent-primary)';
+  authorEl.onmouseover = function() { this.style.textDecoration = 'underline'; };
+  authorEl.onmouseout = function() { this.style.textDecoration = 'none'; };
+  document.getElementById('lbAuthorSub').textContent = (a.author?.major || '') + ' - ' + (a.author?.year || '');
+  document.getElementById('lbLikeCount').textContent = (a.likes || 0) + ' likes';
+  const wrap = document.getElementById('lbImgWrap');
+  wrap.innerHTML = a.image_url
+    ? `<img src="${a.image_url}" style="width:100%;height:100%;min-height:400px;object-fit:cover;display:block">`
+    : artSVG(a.id, 500, 500);
+  loadComments(a.uuid);
+  document.getElementById('commentForm').style.display = isLoggedIn() ? 'flex' : 'none';
+  document.getElementById('lb').classList.add('open');
+  updateNavButtons();
+}
+
+function updateNavButtons() {
+  const prev = document.getElementById('lbPrev');
+  const next = document.getElementById('lbNext');
+  const counter = document.getElementById('lbCounter');
+  prev.disabled = currentIndex <= 0;
+  next.disabled = currentIndex >= allArts.length - 1;
+  counter.textContent = `${currentIndex + 1} / ${allArts.length}`;
+}
+
+function prevArtwork() {
+  if (currentIndex > 0) openLb(allArts[currentIndex - 1], currentIndex - 1);
+}
+
+function nextArtwork() {
+  if (currentIndex < allArts.length - 1) openLb(allArts[currentIndex + 1], currentIndex + 1);
+}
+
+function closeLb() { document.getElementById('lb').classList.remove('open'); currentArtwork = null; currentIndex = -1; }
+document.getElementById('lb').addEventListener('click', e => { if (e.target === document.getElementById('lb')) closeLb(); });
+
+document.addEventListener('keydown', (e) => {
+  if (!document.getElementById('lb').classList.contains('open')) return;
+  if (e.key === 'ArrowLeft') prevArtwork();
+  if (e.key === 'ArrowRight') nextArtwork();
+  if (e.key === 'Escape') closeLb();
+});
+
+document.getElementById('artistsModal')?.addEventListener('click', (e) => {
+  if (e.target === document.getElementById('artistsModal')) closeArtistsModal();
+});
+
+document.addEventListener('keydown', (e) => {
+  const modal = document.getElementById('artistsModal');
+  if (!modal?.classList.contains('open')) return;
+  if (e.key === 'Escape') closeArtistsModal();
+});
+
+async function toggleLike() {
+  if (!isLoggedIn()) { location.href = '/auth'; return; }
+  if (!currentArtwork) return;
+  try {
+    const res = await apiFetch(`/api/artworks/${currentArtwork.uuid}/like`, { method: 'POST' });
+    document.getElementById('lbLikeBtn').textContent = res.liked ? 'Liked' : 'Like';
+    document.getElementById('lbLikeCount').textContent = res.likes + ' likes';
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function loadComments(uuid) {
+  const box = document.getElementById('commentsBox');
+  try {
+    const c = await apiFetch(`/api/artworks/${uuid}/comments`);
+    box.innerHTML = c.length ? c.map(x => `<div class="comment-item"><span class="comment-author">${x.name}:</span> ${x.content}</div>`).join('') : '<p style="font-size:0.85rem;color:var(--text-muted);font-style:italic">No comments yet.</p>';
+  } catch {}
+}
+
+async function postComment() {
+  if (!currentArtwork) return;
+  const input = document.getElementById('commentInput');
+  if (!input.value.trim()) return;
+  try {
+    await apiFetch(`/api/artworks/${currentArtwork.uuid}/comments`, { method: 'POST', body: JSON.stringify({ content: input.value.trim() }) });
+    input.value = '';
+    loadComments(currentArtwork.uuid);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// Init
+buildFilters();
+loadStats();
+loadGallery();
+loadArtists();
+checkUploadBtn();
+</script>
+</body>
+</html>

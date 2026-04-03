@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MMS Gallery - Artist</title>
+<link rel="stylesheet" href="/css/theme.css">
+<style>
+.artist-hero { 
+  padding: 130px 48px 60px; 
+  display: grid; 
+  grid-template-columns: auto 1fr; 
+  gap: 48px; 
+  align-items: center; 
+  max-width: 900px; 
+  margin: 0 auto; 
+}
+.artist-avatar-wrap { 
+  width: 140px; 
+  height: 140px; 
+  border-radius: 50%; 
+  position: relative; 
+  flex-shrink: 0;
+  border: 4px solid var(--accent-primary);
+  overflow: hidden;
+}
+.artist-avatar { 
+  width: 100%; 
+  height: 100%; 
+  border-radius: 50%; 
+  object-fit: cover; 
+  display: block; 
+}
+.artist-name { 
+  font-size: clamp(2rem, 4vw, 3rem); 
+  font-weight: 800; 
+  line-height: 1.1; 
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+.artist-major { 
+  font-size: 0.8rem; 
+  font-weight: 600;
+  letter-spacing: 0.15em; 
+  text-transform: uppercase; 
+  color: var(--accent-primary); 
+  margin-bottom: 14px; 
+}
+.artist-bio { 
+  font-size: 1.05rem; 
+  line-height: 1.7; 
+  color: var(--text-muted); 
+  max-width: 540px; 
+}
+.artist-stats-row { display: flex; gap: 32px; margin-top: 20px; }
+.a-stat-num { font-size: 1.8rem; font-weight: 800; color: var(--accent-primary); line-height: 1; }
+.a-stat-label { 
+  font-size: 0.7rem; 
+  font-weight: 600;
+  letter-spacing: 0.1em; 
+  text-transform: uppercase; 
+  color: var(--text-muted); 
+  margin-top: 4px; 
+}
+.works-section { padding: 40px 48px 80px; max-width: 1200px; margin: 0 auto; }
+.works-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+.w-card { 
+  background: var(--card-bg); 
+  border: 1px solid var(--border-color); 
+  border-radius: var(--radius); 
+  overflow: hidden; 
+  cursor: pointer; 
+  transition: all 0.3s ease;
+}
+.w-card:hover, .w-card.active { 
+  border-color: var(--accent-primary);
+  transform: translateY(-4px);
+  box-shadow: var(--card-shadow-hover);
+}
+.w-card.active {
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+.w-img { width: 100%; height: 180px; object-fit: cover; display: block; background: var(--bg-tertiary); }
+.w-body { padding: 16px; }
+.w-title { 
+  font-size: 1rem; 
+  font-weight: 700; 
+  margin-bottom: 6px; 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+}
+.w-cat { 
+  font-size: 0.7rem; 
+  font-weight: 600;
+  letter-spacing: 0.1em; 
+  text-transform: uppercase; 
+  color: var(--text-muted); 
+}
+
+/* Inline Work Viewer */
+.work-viewer {
+  display: none;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  margin-bottom: 40px;
+  overflow: hidden;
+  box-shadow: var(--card-shadow-hover);
+}
+.work-viewer.active { display: block; }
+.wv-inner {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 0;
+}
+.wv-img {
+  min-height: 400px;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+.wv-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.wv-details {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+}
+.wv-cat {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-primary);
+  margin-bottom: 10px;
+}
+.wv-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 12px;
+}
+.wv-desc {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+  flex: 1;
+}
+.wv-stats {
+  display: flex;
+  gap: 20px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.wv-nav {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+.wv-nav-btn {
+  flex: 1;
+  padding: 12px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.wv-nav-btn:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  background: var(--accent-light);
+}
+.wv-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.wv-close {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-top: 12px;
+  transition: all 0.2s ease;
+}
+.wv-close:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.wv-counter {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 12px;
+}
+
+@media(max-width:768px) {
+  .artist-hero { grid-template-columns: 1fr; text-align: center; padding: 110px 24px 40px; }
+  .artist-avatar-wrap { margin: 0 auto; }
+  .artist-stats-row { justify-content: center; }
+  .works-section { padding: 40px 20px 60px; }
+  .wv-inner { grid-template-columns: 1fr; }
+  .wv-img { min-height: 250px; }
+}
+</style>
+</head>
+<body>
+<div class="bg-shapes">
+  <div class="bg-shape bg-shape-1"></div>
+  <div class="bg-shape bg-shape-2"></div>
+  <div class="bg-shape bg-shape-3"></div>
+</div>
+<div class="page">
+  <nav>
+    <a href="/" class="nav-logo">mmsgallery<small>SDU Student Exhibition</small></a>
+    <ul class="nav-links"><li><a href="/">Home</a></li><li><a href="/gallery">Gallery</a></li></ul>
+    <div class="nav-right" id="navRight"></div>
+  </nav>
+  <div id="content" style="text-align:center;padding:200px 40px;color:var(--text-muted);font-style:italic">Loading artist...</div>
+</div>
+<script src="/js/app.js"></script>
+<script>
+const uuid = location.pathname.split('/').pop();
+let artistWorks = [];
+let currentWorkIndex = -1;
+
+async function load() {
+  try {
+    const artist = await apiFetch('/api/artists/' + uuid);
+    artistWorks = artist.artworks || [];
+    const totalLikes = artistWorks.reduce((s, a) => s + (a.likes || 0), 0);
+    
+    document.getElementById('content').innerHTML = `
+      <div class="artist-hero">
+        <div class="artist-avatar-wrap">
+          <svg viewBox="0 0 140 140" class="artist-avatar" xmlns="http://www.w3.org/2000/svg">
+            <rect width="140" height="140" fill="var(--bg-tertiary)"/>
+            <circle cx="70" cy="55" r="24" fill="var(--border-color)"/>
+            <ellipse cx="70" cy="110" rx="35" ry="26" fill="var(--border-color)"/>
+          </svg>
+        </div>
+        <div>
+          <div class="artist-name">${artist.name}</div>
+          <div class="artist-major">${artist.major || 'Multimedia Arts'} ${artist.year ? '- ' + artist.year : ''}</div>
+          <div class="artist-bio">${artist.bio || 'No bio provided.'}</div>
+          <div class="artist-stats-row">
+            <div><div class="a-stat-num">${artistWorks.length}</div><div class="a-stat-label">Works</div></div>
+            <div><div class="a-stat-num">${totalLikes}</div><div class="a-stat-label">Likes</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="works-section">
+        <div class="section-eyebrow">Portfolio</div>
+        <h2 class="section-title" style="margin-bottom:28px">All <em>Works</em></h2>
+        
+        <!-- Inline Work Viewer -->
+        <div class="work-viewer" id="workViewer">
+          <div class="wv-inner">
+            <div class="wv-img" id="wvImg"></div>
+            <div class="wv-details">
+              <div class="wv-cat" id="wvCat"></div>
+              <div class="wv-title" id="wvTitle"></div>
+              <div class="wv-desc" id="wvDesc"></div>
+              <div class="wv-stats">
+                <span id="wvLikes">0 likes</span>
+                <span id="wvViews">0 views</span>
+              </div>
+              <div class="wv-nav">
+                <button class="wv-nav-btn" id="wvPrev" onclick="prevWork()">&#8592; Prev</button>
+                <button class="wv-nav-btn" id="wvNext" onclick="nextWork()">Next &#8594;</button>
+              </div>
+              <div class="wv-counter" id="wvCounter"></div>
+              <button class="wv-close" onclick="closeViewer()">Close Viewer</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="works-grid" id="worksGrid">
+          ${artistWorks.length ? artistWorks.map((w, i) => `
+            <div class="w-card" id="card-${i}" onclick="viewWork(${i})">
+              ${w.image_url ? `<img class="w-img" src="${w.image_url}" alt="${w.title}">` :
+                `<div class="w-img" style="overflow:hidden">${artSVG(w.id, 280, 180)}</div>`}
+              <div class="w-body"><div class="w-title">${w.title}</div><div class="w-cat">${w.category}</div></div>
+            </div>`).join('') : '<p style="color:var(--text-muted);font-style:italic;grid-column:1/-1">No approved works yet.</p>'}
+        </div>
+      </div>
+      <footer>
+        <div class="footer-content">
+          <div class="footer-col">
+            <h4>About</h4>
+            <p>MMS Gallery is the official student multimedia exhibition platform for SDU University.</p>
+          </div>
+          <div class="footer-col">
+            <h4>Contact</h4>
+            <p><a href="mailto:info@sdu.edu.kz">Contact Us</a></p>
+          </div>
+          <div class="footer-col">
+            <h4>Address</h4>
+            <address>SDU University<br>Almaty, Abylai Khan str. 1/1<br>Kaskelen 040900</address>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>2025 MMS Gallery - SDU University</span>
+        </div>
+      </footer>`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = '<p style="padding:200px 40px;color:var(--text-muted)">Artist not found.</p>';
+  }
+}
+
+function viewWork(index) {
+  currentWorkIndex = index;
+  updateViewer();
+  document.getElementById('workViewer').classList.add('active');
+  
+  // Highlight the active card
+  document.querySelectorAll('.w-card').forEach((c, i) => {
+    c.classList.toggle('active', i === index);
+  });
+  
+  // Scroll to viewer
+  document.getElementById('workViewer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function updateViewer() {
+  if (currentWorkIndex < 0 || currentWorkIndex >= artistWorks.length) return;
+  
+  const w = artistWorks[currentWorkIndex];
+  document.getElementById('wvCat').textContent = w.category;
+  document.getElementById('wvTitle').textContent = w.title;
+  document.getElementById('wvDesc').textContent = w.description || 'No description provided.';
+  document.getElementById('wvLikes').textContent = (w.likes || 0) + ' likes';
+  document.getElementById('wvViews').textContent = (w.views || 0) + ' views';
+  document.getElementById('wvImg').innerHTML = w.image_url 
+    ? `<img src="${w.image_url}" alt="${w.title}">`
+    : artSVG(w.id, 500, 400);
+  document.getElementById('wvCounter').textContent = `${currentWorkIndex + 1} of ${artistWorks.length}`;
+  
+  // Update nav button states
+  document.getElementById('wvPrev').disabled = currentWorkIndex <= 0;
+  document.getElementById('wvNext').disabled = currentWorkIndex >= artistWorks.length - 1;
+  
+  // Update active card
+  document.querySelectorAll('.w-card').forEach((c, i) => {
+    c.classList.toggle('active', i === currentWorkIndex);
+  });
+}
+
+function prevWork() {
+  if (currentWorkIndex > 0) {
+    currentWorkIndex--;
+    updateViewer();
+  }
+}
+
+function nextWork() {
+  if (currentWorkIndex < artistWorks.length - 1) {
+    currentWorkIndex++;
+    updateViewer();
+  }
+}
+
+function closeViewer() {
+  document.getElementById('workViewer').classList.remove('active');
+  document.querySelectorAll('.w-card').forEach(c => c.classList.remove('active'));
+  currentWorkIndex = -1;
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  if (!document.getElementById('workViewer')?.classList.contains('active')) return;
+  if (e.key === 'ArrowLeft') prevWork();
+  if (e.key === 'ArrowRight') nextWork();
+  if (e.key === 'Escape') closeViewer();
+});
+
+load();
+</script>
+</body>
+</html>
