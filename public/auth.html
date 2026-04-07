@@ -157,9 +157,34 @@
           <label class="form-label">Password</label>
           <input class="form-input" type="password" id="loginPass" placeholder="Enter your password" autocomplete="current-password">
         </div>
+        <button class="btn btn-ghost btn-sm" style="align-self:flex-end" onclick="openForgotPassword()">Forgot password?</button>
         <button class="btn btn-primary submit-btn" onclick="doLogin()" data-i18n="signIn">Sign In</button>
         <div class="divider-line"><span></span><p data-i18n="or">or</p><span></span></div>
         <button class="btn btn-ghost submit-btn" onclick="switchTab('register')" data-i18n="createAccount">Create Account</button>
+      </div>
+
+      <!-- Forgot password form -->
+      <div id="forgotForm" class="form-wrap" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" id="forgotEmail" placeholder="your@university.edu" autocomplete="email">
+        </div>
+        <button class="btn btn-primary submit-btn" onclick="doForgotPassword()">Send reset link</button>
+        <button class="btn btn-ghost submit-btn" onclick="switchTab('login')">Back to login</button>
+      </div>
+
+      <!-- Reset password form -->
+      <div id="resetForm" class="form-wrap" style="display:none">
+        <div class="form-group">
+          <label class="form-label">New password</label>
+          <input class="form-input" type="password" id="resetPass" placeholder="Minimum 6 characters" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm password</label>
+          <input class="form-input" type="password" id="resetPass2" placeholder="Repeat password" autocomplete="new-password">
+        </div>
+        <button class="btn btn-primary submit-btn" onclick="doResetPassword()">Reset password</button>
+        <button class="btn btn-ghost submit-btn" onclick="switchTab('login')">Back to login</button>
       </div>
 
       <!-- Register form -->
@@ -242,9 +267,15 @@ if (isLoggedIn()) {
 function switchTab(tab) {
   document.getElementById('loginForm').style.display = tab === 'login' ? 'flex' : 'none';
   document.getElementById('registerForm').style.display = tab === 'register' ? 'flex' : 'none';
+  document.getElementById('forgotForm').style.display = tab === 'forgot' ? 'flex' : 'none';
+  document.getElementById('resetForm').style.display = tab === 'reset' ? 'flex' : 'none';
   document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
   document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
   hideError();
+}
+
+function openForgotPassword() {
+  switchTab('forgot');
 }
 
 function showError(message) {
@@ -320,9 +351,66 @@ async function doRegister() {
         language_pref: getLanguage()
       })
     });
-    toast('Account created. Please check your email and verify your account before login.', 'success');
+    if (res.requiresEmailVerification) {
+      toast('Account created. Check Gmail and confirm your email before login.', 'success');
+    } else {
+      toast('Account created successfully. You can log in now.', 'success');
+    }
     switchTab('login');
     document.getElementById('loginIdentifier').value = email;
+  } catch (e) {
+    showError(e.message);
+  }
+}
+
+async function doForgotPassword() {
+  hideError();
+  const email = document.getElementById('forgotEmail').value.trim();
+  if (!email) {
+    showError('Email is required');
+    return;
+  }
+  try {
+    await apiFetch('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+    toast('If account exists, reset link was sent to your Gmail.', 'success');
+    switchTab('login');
+    document.getElementById('loginIdentifier').value = email;
+  } catch (e) {
+    showError(e.message);
+  }
+}
+
+async function doResetPassword() {
+  hideError();
+  const params = new URLSearchParams(location.search);
+  const token = params.get('token') || '';
+  const password = document.getElementById('resetPass').value;
+  const pass2 = document.getElementById('resetPass2').value;
+
+  if (!token) {
+    showError('Missing reset token');
+    return;
+  }
+  if (!password || password.length < 6) {
+    showError('Password must be at least 6 characters');
+    return;
+  }
+  if (password !== pass2) {
+    showError(t('passwordsDoNotMatch'));
+    return;
+  }
+
+  try {
+    await apiFetch('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword: password })
+    });
+    toast('Password updated. Please sign in.', 'success');
+    history.replaceState({}, '', '/auth');
+    switchTab('login');
   } catch (e) {
     showError(e.message);
   }
@@ -336,6 +424,7 @@ document.addEventListener('keydown', (e) => {
 
 const params = new URLSearchParams(location.search);
 if (params.get('mode') === 'register') switchTab('register');
+if (params.get('mode') === 'reset' && params.get('token')) switchTab('reset');
 if (params.get('verified') === '1') {
   toast('Email verified successfully. You can now log in.', 'success');
 }

@@ -5,10 +5,10 @@ const { DatabaseSync } = require('node:sqlite');
 
 const sqlitePath = path.join(__dirname, '..', 'mmsgallery.sqlite');
 const schemaPath = path.join(__dirname, '..', 'supabase', 'schema.sql');
-const supabaseDbUrl = process.env.SUPABASE_DB_URL;
+const supabaseDbUrl = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
 
 if (!supabaseDbUrl) {
-  console.error('Missing SUPABASE_DB_URL environment variable.');
+  console.error('Missing DATABASE_URL or SUPABASE_DB_URL environment variable.');
   process.exit(1);
 }
 
@@ -31,7 +31,8 @@ const TABLES_IN_ORDER = [
   'notifications',
   'feedback',
   'profile_views',
-  'email_verification_tokens'
+  'email_verification_tokens',
+  'password_reset_tokens'
 ];
 
 function quoteIdent(name) {
@@ -83,7 +84,8 @@ async function syncSequences(pg) {
     'notifications',
     'feedback',
     'profile_views',
-    'email_verification_tokens'
+    'email_verification_tokens',
+    'password_reset_tokens'
   ];
 
   for (const table of identityTables) {

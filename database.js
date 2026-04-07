@@ -178,6 +178,16 @@ db.exec(`
     used_at           DATETIME,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id           INTEGER NOT NULL,
+    token             TEXT UNIQUE NOT NULL,
+    expires_at        DATETIME NOT NULL,
+    created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+    used_at           DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
 
 // Backward-compatible migrations for existing DBs.
@@ -313,6 +323,20 @@ if (!hasTable('profile_views')) {
       created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (viewed_user_id) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (viewer_user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+  `);
+}
+
+if (!hasTable('password_reset_tokens')) {
+  db.exec(`
+    CREATE TABLE password_reset_tokens (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id           INTEGER NOT NULL,
+      token             TEXT UNIQUE NOT NULL,
+      expires_at        DATETIME NOT NULL,
+      created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+      used_at           DATETIME,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
   `);
 }
