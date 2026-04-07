@@ -1151,6 +1151,7 @@ function setLanguage(lang) {
   localStorage.setItem(I18N_KEY, next);
   updateNavAuth();
   applyTranslations();
+  window.dispatchEvent(new CustomEvent('mms:language-changed', { detail: { lang: next } }));
 }
 
 function changeLanguage(lang) {

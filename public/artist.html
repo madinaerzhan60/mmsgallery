@@ -775,25 +775,57 @@ function profileUiText(key) {
       contact: 'CONTACT',
       openLink: 'Open ↗',
       notProvided: 'Not provided',
-      visibleToLoggedInUsersOnly: 'Visible to logged-in users only'
+      visibleToLoggedInUsersOnly: 'Visible to logged-in users only',
+      followersTitle: 'FOLLOWERS',
+      followingTitle: 'FOLLOWING',
+      portfolioTitle: 'PORTFOLIO',
+      profileButton: 'Profile',
+      back: 'Back',
+      next: 'Next'
     },
     ru: {
       skills: 'НАВЫКИ',
       contact: 'КОНТАКТЫ',
       openLink: 'Открыть ↗',
       notProvided: 'Не указано',
-      visibleToLoggedInUsersOnly: 'Видно только авторизованным пользователям'
+      visibleToLoggedInUsersOnly: 'Видно только авторизованным пользователям',
+      followersTitle: 'ПОДПИСЧИКИ',
+      followingTitle: 'ПОДПИСКИ',
+      portfolioTitle: 'ПОРТФОЛИО',
+      profileButton: 'Профиль',
+      back: 'Назад',
+      next: 'Вперед'
     },
     kk: {
       skills: 'ДАҒДЫЛАР',
       contact: 'БАЙЛАНЫС',
       openLink: 'Ашу ↗',
       notProvided: 'Көрсетілмеген',
-      visibleToLoggedInUsersOnly: 'Тек жүйеге кірген пайдаланушыларға көрінеді'
+      visibleToLoggedInUsersOnly: 'Тек жүйеге кірген пайдаланушыларға көрінеді',
+      followersTitle: 'ЖАЗЫЛУШЫЛАР',
+      followingTitle: 'ЖАЗЫЛЫМДАР',
+      portfolioTitle: 'ПОРТФОЛИО',
+      profileButton: 'Профиль',
+      back: 'Артқа',
+      next: 'Алға'
     }
   };
 
   return (dict[lang] && dict[lang][key]) || dict.en[key] || key;
+}
+
+function applyProfileLocaleText() {
+  const followersTitle = document.getElementById('followersModalTitle');
+  const followingTitle = document.getElementById('followingModalTitle');
+  const portfolioTitle = document.getElementById('lightboxModalTitle');
+  const prevBtn = document.getElementById('lightboxPrevBtn');
+  const nextBtn = document.getElementById('lightboxNextBtn');
+
+  if (followersTitle) followersTitle.textContent = profileUiText('followersTitle');
+  if (followingTitle) followingTitle.textContent = profileUiText('followingTitle');
+  if (portfolioTitle) portfolioTitle.textContent = profileUiText('portfolioTitle');
+  if (prevBtn) prevBtn.setAttribute('aria-label', profileUiText('back'));
+  if (nextBtn) nextBtn.setAttribute('aria-label', profileUiText('next'));
 }
 
 function avatarFallback(name = 'U') {
@@ -913,7 +945,7 @@ function renderConnections(items, emptyText) {
             <div class="follower-name">${item.name}</div>
           </div>
         </div>
-        <a class="btn btn-ghost btn-sm" href="/profile/${item.username || item.uuid}">Профиль</a>
+        <a class="btn btn-ghost btn-sm" href="/profile/${item.username || item.uuid}">${profileUiText('profileButton')}</a>
       </div>
     `).join('') : `<div style="color:var(--text-muted);padding:8px 0">${emptyText}</div>`;
 }
@@ -1261,6 +1293,10 @@ async function load() {
 }
 
 load();
+applyProfileLocaleText();
+window.addEventListener('mms:language-changed', () => {
+  applyProfileLocaleText();
+});
 
 document.addEventListener('keydown', (event) => {
   const lightboxOpen = document.getElementById('lightboxModal')?.classList.contains('open');
@@ -1274,7 +1310,7 @@ document.addEventListener('keydown', (event) => {
 <div id="followersModal" class="modal-layer" aria-hidden="true" onclick="if(event.target === this) closeFollowersModal()">
   <div class="modal-card">
     <div class="modal-head">
-      <div class="modal-title">ЖАЗЫЛУШЫЛАР</div>
+      <div class="modal-title" id="followersModalTitle">FOLLOWERS</div>
       <button class="lightbox-close" onclick="closeFollowersModal()">✕</button>
     </div>
     <div id="followersModalBody" class="modal-body">
@@ -1286,7 +1322,7 @@ document.addEventListener('keydown', (event) => {
 <div id="followingModal" class="modal-layer" aria-hidden="true" onclick="if(event.target === this) closeFollowingModal()">
   <div class="modal-card">
     <div class="modal-head">
-      <div class="modal-title">ПОДПИСКИ</div>
+      <div class="modal-title" id="followingModalTitle">FOLLOWING</div>
       <button class="lightbox-close" onclick="closeFollowingModal()">✕</button>
     </div>
     <div id="followingModalBody" class="modal-body">
@@ -1298,14 +1334,14 @@ document.addEventListener('keydown', (event) => {
 <div id="lightboxModal" class="modal-layer" aria-hidden="true" onclick="if(event.target === this) closeLightbox()">
   <div class="modal-card" style="width:min(1100px,98vw)">
     <div class="modal-head">
-      <div class="modal-title">ПОРТФОЛИО</div>
+      <div class="modal-title" id="lightboxModalTitle">PORTFOLIO</div>
       <button class="lightbox-close" onclick="closeLightbox()">✕</button>
     </div>
     <div class="lightbox-scroll">
       <div class="lightbox-media-wrap">
-        <button class="lightbox-nav lightbox-prev" onclick="moveLightbox(-1)" aria-label="Назад">‹</button>
+        <button id="lightboxPrevBtn" class="lightbox-nav lightbox-prev" onclick="moveLightbox(-1)" aria-label="Back">‹</button>
         <div id="lightboxMedia"></div>
-        <button class="lightbox-nav lightbox-next" onclick="moveLightbox(1)" aria-label="Вперед">›</button>
+        <button id="lightboxNextBtn" class="lightbox-nav lightbox-next" onclick="moveLightbox(1)" aria-label="Next">›</button>
       </div>
       <div class="lightbox-meta">
         <div id="lightboxTitle" class="lightbox-title"></div>
