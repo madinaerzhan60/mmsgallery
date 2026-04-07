@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MMS Gallery - Contact</title>
+<link rel="stylesheet" href="/css/theme.css">
+<style>
+.page-shell { padding: 120px 48px 72px; max-width: 1200px; margin: 0 auto; }
+.top-head { margin-bottom: 26px; }
+.contact-shell {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: 22px;
+}
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--card-shadow);
+}
+.contact-list { display: grid; gap: 12px; margin-top: 18px; }
+.contact-item {
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+.contact-item a { color: var(--accent-primary); text-decoration: none; font-weight: 600; }
+.contact-item a:hover { text-decoration: underline; }
+.form-grid { display: grid; gap: 14px; }
+.submit-full { width: 100%; justify-content: center; }
+@media (max-width: 900px) {
+  .page-shell { padding-inline: 20px; }
+  .contact-shell { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="bg-shapes"><div class="bg-shape bg-shape-1"></div><div class="bg-shape bg-shape-2"></div><div class="bg-shape bg-shape-3"></div></div>
+<div class="page">
+  <nav>
+    <a href="/" class="nav-logo">mmsgallery<small>SDU Student Exhibition</small></a>
+    <ul class="nav-links"><li><a href="/">Home</a></li><li><a href="/gallery">Gallery</a></li><li><a href="/artists">Artists</a></li><li><a href="/hire">Hire</a></li><li><a href="/contact">Contact</a></li></ul>
+    <div class="nav-right" id="navRight"></div>
+  </nav>
+
+  <main class="page-shell">
+    <div class="top-head reveal">
+      <div class="section-eyebrow" data-i18n="contactUs">/ CONTACT US</div>
+      <h1 class="section-title" style="font-size:clamp(2rem,5vw,3.4rem);margin-top:8px" data-i18n="getInTouch">Get In Touch</h1>
+      <p class="text-muted" style="max-width:680px;margin-top:10px" data-i18n="contactPrompt">Have questions? We'd love to hear from you.</p>
+    </div>
+
+    <div class="contact-shell" style="margin-top:24px">
+      <aside class="card reveal">
+        <div class="section-eyebrow" data-i18n="contactInfo">CONTACT INFO</div>
+        <h2 class="section-title" style="font-size:1.5rem">SDU University</h2>
+        <div class="contact-list">
+          <div class="contact-item">📧 info@sdu.edu.kz</div>
+          <div class="contact-item">📞 +7 (727) 307 95 65</div>
+          <div class="contact-item">📍 SDU University, Almaty, Abylai Khan str. 1/1, Kaskelen 040900</div>
+          <div class="contact-item">Instagram → <a href="https://www.instagram.com/sdu.mms/" target="_blank" rel="noreferrer">@sdu.mms</a></div>
+          <div class="contact-item">TikTok → <a href="https://www.tiktok.com/@sdukz" target="_blank" rel="noreferrer">@sdukz</a></div>
+        </div>
+      </aside>
+
+      <section class="card reveal">
+        <form id="feedbackForm" class="form-grid">
+          <div class="form-row" style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
+            <div class="form-group"><label class="form-label" for="name" data-i18n="name">Name</label><input class="form-input" id="name" name="name" required></div>
+            <div class="form-group"><label class="form-label" for="email" data-i18n="email">Email</label><input class="form-input" id="email" name="email" type="email" required></div>
+          </div>
+          <div class="form-group"><label class="form-label" for="subject" data-i18n="subject">Subject</label><select class="form-select" id="subject" name="subject"><option data-i18n="generalQuestion">General Question</option><option data-i18n="bugReport">Bug Report</option><option data-i18n="collaboration">Collaboration</option><option data-i18n="other">Other</option></select></div>
+          <div class="form-group"><label class="form-label" for="message" data-i18n="message">Message</label><textarea class="form-textarea" id="message" name="message" style="min-height:180px" required></textarea></div>
+          <div id="feedbackStatus" class="text-muted" style="min-height:1.25rem"></div>
+          <button class="btn btn-primary submit-full" type="submit" data-i18n="send">Send</button>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <footer></footer>
+</div>
+<script src="/js/app.js"></script>
+<script>
+document.getElementById('feedbackForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = event.target;
+  const status = document.getElementById('feedbackStatus');
+  const submitButton = form.querySelector('button[type="submit"]');
+  const payload = {
+    name: document.getElementById('name').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    subject: document.getElementById('subject').value,
+    message: document.getElementById('message').value.trim(),
+  };
+
+  status.textContent = t('sending');
+  submitButton.disabled = true;
+
+  try {
+    await apiFetch('/api/contact', { method: 'POST', body: JSON.stringify(payload) });
+    toast(t('feedbackSent'), 'success');
+    form.reset();
+    status.textContent = t('feedbackThanks');
+  } catch (error) {
+    status.textContent = error.message;
+    toast(error.message, 'error');
+  } finally {
+    submitButton.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

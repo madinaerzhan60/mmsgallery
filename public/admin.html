@@ -395,6 +395,8 @@
         <div class="admin-nav-item active" onclick="showPanel('dashboard')" data-panel="dashboard">Dashboard</div>
         <div class="admin-nav-item" onclick="showPanel('artworks')" data-panel="artworks">Artworks <span id="pendingBadge" class="badge-count" style="display:none">0</span></div>
         <div class="admin-nav-item" onclick="showPanel('users')" data-panel="users">Students</div>
+        <div class="admin-nav-item" onclick="showPanel('feedback')" data-panel="feedback">Feedback <span id="feedbackBadge" class="badge-count" style="display:none">0</span></div>
+        <div class="admin-nav-item" onclick="showPanel('follows')" data-panel="follows" data-i18n="followGraph">Follow Graph</div>
       </nav>
       <div style="padding:20px 14px;border-top:1px solid var(--border-color)">
         <a href="/dashboard" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">Student View</a>
@@ -405,8 +407,8 @@
     <main class="admin-main">
       <!-- Dashboard -->
       <div class="tab-panel active" id="panel-dashboard">
-        <h1 class="page-heading">Admin <em>Dashboard</em></h1>
-        <p class="page-subheading">Overview of the MMS Gallery platform.</p>
+        <h1 class="page-heading">Admin <span data-i18n="dashboard">Dashboard</span></h1>
+        <p class="page-subheading" data-i18n="overviewOfPlatform">Overview of the MMS Gallery platform.</p>
         <div class="stats-row" id="statsRow">
           <div class="stat-box"><div class="stat-box-num" id="stStudents">--</div><div class="stat-box-label">Students</div></div>
           <div class="stat-box"><div class="stat-box-num" id="stArtworks">--</div><div class="stat-box-label">Artworks</div></div>
@@ -425,6 +427,7 @@
             <div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:var(--radius);padding:24px;display:flex;flex-direction:column;gap:12px">
               <button class="btn btn-primary" onclick="showPanel('artworks');filterStatus('pending')">Review Pending Works</button>
               <button class="btn btn-ghost" onclick="showPanel('users')">View Students</button>
+              <button class="btn btn-ghost" onclick="showPanel('feedback')" data-i18n="viewMessages">View Messages</button>
             </div>
           </div>
         </div>
@@ -432,8 +435,8 @@
 
       <!-- Artworks -->
       <div class="tab-panel" id="panel-artworks">
-        <h1 class="page-heading">Manage <em>Artworks</em></h1>
-        <p class="page-subheading">Review, approve or reject student submissions.</p>
+          <h1 class="page-heading" data-i18n="manageArtworks">Manage <span>Artworks</span></h1>
+          <p class="page-subheading" data-i18n="reviewApproveRejectSubmissions">Review, approve or reject student submissions.</p>
         <div class="filter-bar">
           <input type="text" id="artSearch" placeholder="Search by title or author..." oninput="filterArtworks()">
           <div class="filters" id="artStatusFilters">
@@ -446,8 +449,8 @@
         <div class="admin-table-wrap">
           <table class="admin-table">
             <thead><tr>
-              <th>Image</th><th>Title</th><th>Artist</th><th>Category</th>
-              <th>Status</th><th>Likes</th><th>Date</th><th>Actions</th>
+              <th data-i18n="image">Image</th><th data-i18n="title">Title</th><th data-i18n="artist">Artist</th><th data-i18n="categoryLabel">Category</th>
+              <th data-i18n="statusLabel">Status</th><th data-i18n="likesLabel">Likes</th><th data-i18n="dateLabel">Date</th><th data-i18n="actionsLabel">Actions</th>
             </tr></thead>
             <tbody id="artworksBody"></tbody>
           </table>
@@ -456,15 +459,61 @@
 
       <!-- Users -->
       <div class="tab-panel" id="panel-users">
-        <h1 class="page-heading">Manage <em>Students</em></h1>
-        <p class="page-subheading">All registered student accounts.</p>
+        <h1 class="page-heading" data-i18n="manageStudents">Manage <span>Students</span></h1>
+        <p class="page-subheading" data-i18n="allRegisteredStudentAccounts">All registered student accounts.</p>
         <div class="filter-bar">
-          <input type="text" id="userSearch" placeholder="Search by name or email..." oninput="filterUsers()">
+          <input type="text" id="userSearch" placeholder="Search by name or email..." data-i18n-placeholder="searchByNameOrEmail" oninput="filterUsers()">
+          <select id="userProfessionFilter" class="form-select" onchange="loadUsers()" style="max-width:220px">
+            <option value="all" data-i18n="allProfessions">All professions</option>
+            <option value="3D Modeler" data-i18n="3D Modeler">3D Modeler</option>
+            <option value="3D/2D Animator" data-i18n="3D/2D Animator">3D/2D Animator</option>
+            <option value="VFX Artist" data-i18n="VFX Artist">VFX Artist</option>
+            <option value="Film Editor" data-i18n="Film Editor">Film Editor</option>
+            <option value="Graphic Designer" data-i18n="Graphic Designer">Graphic Designer</option>
+            <option value="UX/UI Designer" data-i18n="UX/UI Designer">UX/UI Designer</option>
+            <option value="IoT Engineer" data-i18n="IoT Engineer">IoT Engineer</option>
+            <option value="Interior & Architecture Designer" data-i18n="Interior & Architecture Designer">Interior & Architecture Designer</option>
+            <option value="VR/AR Developer" data-i18n="VR/AR Developer">VR/AR Developer</option>
+            <option value="Game Designer" data-i18n="Game Designer">Game Designer</option>
+            <option value="Game Animator" data-i18n="Game Animator">Game Animator</option>
+            <option value="Game Artist" data-i18n="Game Artist">Game Artist</option>
+            <option value="Game Developer" data-i18n="Game Developer">Game Developer</option>
+            <option value="Photographer" data-i18n="Photographer">Photographer</option>
+            <option value="Other" data-i18n="Other">Other</option>
+          </select>
+          <select id="userOpenToWorkFilter" class="form-select" onchange="loadUsers()" style="max-width:180px">
+            <option value="all" data-i18n="all">Open to work: all</option>
+            <option value="1" data-i18n="openToWorkOnly">Open to work only</option>
+            <option value="0" data-i18n="closedToWork">Closed to work</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="exportStudentsCsv()" data-i18n="exportCsv">Export CSV</button>
         </div>
         <div class="admin-table-wrap">
           <table class="admin-table">
-            <thead><tr><th>Name</th><th>Email</th><th>Major</th><th>Year</th><th>Works</th><th>Joined</th><th>Actions</th></tr></thead>
+            <thead><tr><th data-i18n="name">Name</th><th data-i18n="email">Email</th><th data-i18n="majorLabel">Major</th><th data-i18n="yearOfStudy">Year</th><th data-i18n="works">Works</th><th data-i18n="joinedLabel">Joined</th><th data-i18n="actionsLabel">Actions</th></tr></thead>
             <tbody id="usersBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-feedback">
+        <h1 class="page-heading" data-i18n="feedbackSubmissions">Feedback <span>Submissions</span></h1>
+        <p class="page-subheading" data-i18n="messagesSentFromContactForm">Messages sent from the Contact form.</p>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead><tr><th data-i18n="name">Name</th><th data-i18n="email">Email</th><th data-i18n="subject">Subject</th><th data-i18n="message">Message</th><th data-i18n="dateLabel">Date</th><th data-i18n="actionsLabel">Action</th></tr></thead>
+            <tbody id="feedbackBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-follows">
+        <h1 class="page-heading" data-i18n="followGraph">Follow <span>Graph</span></h1>
+        <p class="page-subheading" data-i18n="topStudentsByFollowersAndFollowing">Top students by followers and following counts.</p>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead><tr><th data-i18n="profile">Student</th><th data-i18n="followers">Followers</th><th data-i18n="following">Following</th><th data-i18n="ratio">Ratio</th></tr></thead>
+            <tbody id="followStatsBody"></tbody>
           </table>
         </div>
       </div>
@@ -535,12 +584,17 @@ async function loadStats() {
       badge.textContent = s.pending;
       badge.style.display = 'inline';
     }
+    if (s.feedback > 0) {
+      const badge = document.getElementById('feedbackBadge');
+      badge.textContent = s.feedback;
+      badge.style.display = 'inline';
+    }
     // Breakdown bars
     const bars = document.getElementById('breakdownBars');
     const items = [
-      { label: 'Approved', val: s.approved, total: s.artworks || 1, color: 'var(--success)' },
-      { label: 'Pending', val: s.pending, total: s.artworks || 1, color: 'var(--warning)' },
-      { label: 'Rejected', val: s.rejected, total: s.artworks || 1, color: 'var(--danger)' },
+      { label: t('approved'), val: s.approved, total: s.artworks || 1, color: 'var(--success)' },
+      { label: t('pending'), val: s.pending, total: s.artworks || 1, color: 'var(--warning)' },
+      { label: t('rejected'), val: s.rejected, total: s.artworks || 1, color: 'var(--danger)' },
     ];
     bars.innerHTML = items.map(i => `
       <div style="margin-bottom:16px">
@@ -586,22 +640,22 @@ function renderArtworks(data) {
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span class="artwork-title-link" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">${a.title}</span></td>
       <td style="color:var(--text-muted)">${a.author_name || '--'}</td>
       <td><span class="badge badge-gray">${a.category}</span></td>
-      <td><span class="badge ${a.status === 'approved' ? 'badge-green' : a.status === 'rejected' ? 'badge-red' : 'badge-yellow'}">${a.status}</span></td>
+      <td><span class="badge ${a.status === 'approved' ? 'badge-green' : a.status === 'rejected' ? 'badge-red' : 'badge-yellow'}">${t(a.status) || a.status}</span></td>
       <td style="color:var(--accent-primary)">${a.likes || 0}</td>
       <td style="color:var(--text-muted);font-size:0.85rem">${new Date(a.created_at).toLocaleDateString()}</td>
       <td><div class="action-group">
-        ${a.status !== 'approved' ? `<button class="btn btn-success btn-sm" onclick="setStatus(${a.id},'approved')">Approve</button>` : ''}
-        ${a.status !== 'rejected' ? `<button class="btn btn-danger btn-sm" onclick="setStatus(${a.id},'rejected')">Reject</button>` : ''}
+        ${a.status !== 'approved' ? `<button class="btn btn-success btn-sm" onclick="setStatus(${a.id},'approved')">${t('approved')}</button>` : ''}
+        ${a.status !== 'rejected' ? `<button class="btn btn-danger btn-sm" onclick="setStatus(${a.id},'rejected')">${t('rejected')}</button>` : ''}
         ${a.featured ? `<button class="btn btn-ghost btn-sm" onclick="setFeatured(${a.id},0)">Unfeature</button>` :
-          `<button class="btn btn-ghost btn-sm" onclick="setFeatured(${a.id},1)">Feature</button>`}
+          `<button class="btn btn-ghost btn-sm" onclick="setFeatured(${a.id},1)">${t('feature') || 'Feature'}</button>`}
       </div></td>
-    </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);font-style:italic">No artworks found.</td></tr>';
+    </tr>`).join('') : `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);font-style: normal">${t('noArtworksFound')}</td></tr>`;
 }
 
 async function setStatus(id, status) {
   try {
     await apiFetch('/api/admin/artworks/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
-    toast('Status updated to ' + status, 'success');
+    toast(`${t('statusUpdatedTo')} ${t(status) || status}`, 'success');
     loadArtworks();
     loadStats();
   } catch(e) { toast(e.message, 'error'); }
@@ -609,7 +663,7 @@ async function setStatus(id, status) {
 async function setFeatured(id, featured) {
   try {
     await apiFetch('/api/admin/artworks/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status: allArtworksData.find(a => a.id === id)?.status || 'approved', featured }) });
-    toast(featured ? 'Artwork featured!' : 'Artwork unfeatured', 'success');
+    toast(featured ? t('artworkFeatured') : t('artworkUnfeatured'), 'success');
     loadArtworks();
   } catch(e) { toast(e.message, 'error'); }
 }
@@ -617,7 +671,9 @@ async function setFeatured(id, featured) {
 // Users
 async function loadUsers() {
   try {
-    allUsersData = await apiFetch('/api/admin/users');
+    const profession = document.getElementById('userProfessionFilter')?.value || 'all';
+    const open = document.getElementById('userOpenToWorkFilter')?.value || 'all';
+    allUsersData = await apiFetch(`/api/admin/users?profession=${encodeURIComponent(profession)}&open_to_work=${encodeURIComponent(open)}`);
     renderUsers(allUsersData);
   } catch {}
 }
@@ -634,17 +690,75 @@ function renderUsers(data) {
       <td>${u.year || '--'}</td>
       <td style="color:var(--accent-primary)">${u.artwork_count || 0}</td>
       <td style="color:var(--text-muted);font-size:0.85rem">${new Date(u.created_at).toLocaleDateString()}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id},'${u.name}')">Remove</button></td>
-    </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);font-style:italic">No students yet.</td></tr>';
+      <td><button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id},'${u.name}')">${t('delete')}</button></td>
+    </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);font-style: normal">${t('noStudentsYet')}</td></tr>`;
 }
 async function deleteUser(id, name) {
-  if (!confirm(`Remove student "${name}"? All their artworks will be deleted.`)) return;
+  if (!confirm(`${t('delete')} student "${name}"? All their artworks will be deleted.`)) return;
   try {
     await apiFetch('/api/admin/users/' + id, { method: 'DELETE' });
-    toast('Student removed', 'success');
+    toast(t('studentRemoved') || 'Student removed', 'success');
     loadUsers();
     loadStats();
   } catch(e) { toast(e.message, 'error'); }
+}
+
+function exportStudentsCsv() {
+  location.href = '/api/admin/students/export.csv';
+}
+
+async function loadFeedback() {
+  try {
+    const items = await apiFetch('/api/admin/feedback');
+    const body = document.getElementById('feedbackBody');
+    body.innerHTML = items.length
+      ? items.map((f) => `
+        <tr>
+          <td>${f.name}</td>
+          <td>${f.email}</td>
+          <td>${f.subject}</td>
+          <td style="max-width:380px;white-space:normal">${f.message}</td>
+          <td>${new Date(f.created_at).toLocaleDateString()}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteFeedback(${f.id})">${t('delete')}</button></td>
+        </tr>
+      `).join('')
+          : `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);font-style: normal">${t('noFeedbackYet')}</td></tr>`;
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function deleteFeedback(id) {
+  if (!confirm(`${t('delete')} this feedback item?`)) return;
+  try {
+    await apiFetch('/api/admin/feedback/' + id, { method: 'DELETE' });
+    toast(t('feedbackRemoved') || 'Feedback removed', 'success');
+    loadFeedback();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function loadFollowStats() {
+  try {
+    const rows = await apiFetch('/api/admin/follows/stats');
+    const body = document.getElementById('followStatsBody');
+    body.innerHTML = rows.length
+      ? rows.map((r) => {
+        const ratio = r.following ? (r.followers / r.following).toFixed(2) : String(r.followers);
+        return `
+          <tr>
+            <td><a class="artist-link" href="/profile/${r.username}" target="_blank">${r.name}</a></td>
+            <td>${r.followers}</td>
+            <td>${r.following}</td>
+            <td>${ratio}</td>
+          </tr>
+        `;
+      }).join('')
+      : `<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-muted);font-style: normal">${t('noFollowsYet')}</td></tr>`;
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 // Modal State
@@ -682,7 +796,7 @@ function handleOpenModal(artwork) {
   // Set artist link with profile URL
   const artistLink = document.getElementById('modalArtistLink');
   if (artwork.author_uuid) {
-    artistLink.href = `/artist/${artwork.author_uuid}`;
+    artistLink.href = `/profile/${artwork.author_username}`;
     artistLink.textContent = artwork.author_name || '--';
     artistLink.style.pointerEvents = 'auto';
   } else {
@@ -772,6 +886,8 @@ document.addEventListener('DOMContentLoaded', () => {
 loadStats();
 loadArtworks();
 loadUsers();
+loadFeedback();
+loadFollowStats();
 </script>
 </body>
 </html>

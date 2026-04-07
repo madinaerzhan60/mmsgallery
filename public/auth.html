@@ -78,7 +78,21 @@
 }
 .divider-line span { flex: 1; height: 1px; background: var(--border-color); }
 .divider-line p { font-size: 0.75rem; color: var(--text-muted); }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.field-row > .form-group {
+  min-width: 0;
+}
+.field-row .form-input,
+.field-row .form-select,
+.field-row .form-textarea {
+  width: 100%;
+  max-width: 100%;
+}
 .error-msg { 
   color: var(--danger); 
   font-size: 0.85rem; 
@@ -104,6 +118,9 @@
     <ul class="nav-links">
       <li><a href="/">Home</a></li>
       <li><a href="/gallery">Gallery</a></li>
+      <li><a href="/artists">Artists</a></li>
+      <li><a href="/hire">Hire</a></li>
+      <li><a href="/contact">Contact</a></li>
     </ul>
     <div class="nav-right" id="navRight"></div>
   </nav>
@@ -123,16 +140,16 @@
       <!-- Login form -->
       <div id="loginForm" class="form-wrap">
         <div class="form-group">
-          <label class="form-label">Email Address</label>
-          <input class="form-input" type="email" id="loginEmail" placeholder="your@university.edu" autocomplete="email">
+          <label class="form-label">Email or Username</label>
+          <input class="form-input" type="text" id="loginIdentifier" placeholder="your@university.edu or username" autocomplete="username">
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
           <input class="form-input" type="password" id="loginPass" placeholder="Enter your password" autocomplete="current-password">
         </div>
-        <button class="btn btn-primary submit-btn" onclick="doLogin()">Sign In</button>
-        <div class="divider-line"><span></span><p>or</p><span></span></div>
-        <button class="btn btn-ghost submit-btn" onclick="switchTab('register')">Create Account</button>
+        <button class="btn btn-primary submit-btn" onclick="doLogin()" data-i18n="signIn">Sign In</button>
+        <div class="divider-line"><span></span><p data-i18n="or">or</p><span></span></div>
+        <button class="btn btn-ghost submit-btn" onclick="switchTab('register')" data-i18n="createAccount">Create Account</button>
       </div>
 
       <!-- Register form -->
@@ -140,12 +157,18 @@
         <div class="field-row">
           <div class="form-group">
             <label class="form-label">Full Name</label>
-            <input class="form-input" type="text" id="regName" placeholder="Your Name">
+            <input class="form-input" type="text" id="regName" placeholder="Your full name">
           </div>
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input class="form-input" type="text" id="regUsername" placeholder="daniyar_m" autocomplete="username">
+          </div>
+        </div>
+        <div class="field-row">
           <div class="form-group">
             <label class="form-label">Year</label>
             <select class="form-select" id="regYear">
-              <option value="">Select Year</option>
+              <option value="" data-i18n="selectYear">Select Year</option>
               <option value="1st Year">1st Year</option>
               <option value="2nd Year">2nd Year</option>
               <option value="3rd Year">3rd Year</option>
@@ -153,47 +176,48 @@
               <option value="Master">Master</option>
             </select>
           </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Major / Specialization</label>
-          <select class="form-select" id="regMajor">
-            <option value="">Select Major</option>
-            <option>Digital Art</option>
-            <option>Photography</option>
-            <option>3D and Motion Graphics</option>
-            <option>Illustration</option>
-            <option>Video and Film</option>
-            <option>Interactive Media</option>
-            <option>Graphic Design</option>
-            <option>Animation</option>
-            <option>Sound Design</option>
-          </select>
+          <div class="form-group">
+            <label class="form-label">Profession / Specialization</label>
+            <select class="form-select" id="regMajor">
+            <option value="" data-i18n="selectProfession">Select Profession</option>
+            <option>3D Modeler</option>
+            <option>3D/2D Animator</option>
+            <option>VFX Artist</option>
+            <option>Film Editor</option>
+            <option>Graphic Designer</option>
+            <option>UX/UI Designer</option>
+            <option>IoT Engineer</option>
+            <option>Interior & Architecture Designer</option>
+            <option>VR/AR Developer</option>
+            <option>Game Designer</option>
+            <option>Game Animator</option>
+            <option>Game Artist</option>
+            <option>Game Developer</option>
+            <option>Photographer</option>
+            <option>Other</option>
+            </select>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Email Address</label>
-          <input class="form-input" type="email" id="regEmail" placeholder="your@university.edu">
+          <input class="form-input" type="email" id="regEmail" placeholder="your@university.edu" autocomplete="email">
         </div>
         <div class="field-row">
           <div class="form-group">
             <label class="form-label">Password</label>
-            <input class="form-input" type="password" id="regPass" placeholder="Min. 6 chars">
+            <input class="form-input" type="password" id="regPass" placeholder="Minimum 6 characters" autocomplete="new-password">
           </div>
           <div class="form-group">
             <label class="form-label">Confirm</label>
-            <input class="form-input" type="password" id="regPass2" placeholder="Repeat">
+            <input class="form-input" type="password" id="regPass2" placeholder="Repeat password" autocomplete="new-password">
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Short Bio (optional)</label>
-          <textarea class="form-textarea" id="regBio" placeholder="Tell us about yourself..." style="min-height:70px"></textarea>
+          <textarea class="form-textarea" id="regBio" placeholder="Tell us about yourself"></textarea>
         </div>
-        <button class="btn btn-primary submit-btn" onclick="doRegister()">Create Account</button>
-        <div class="divider-line"><span></span><p>or</p><span></span></div>
+        <button class="btn btn-primary submit-btn" onclick="doRegister()" data-i18n="createAccount">Create Account</button>
         <button class="btn btn-ghost submit-btn" onclick="switchTab('login')">Already have an account</button>
-      </div>
-
-      <div class="auth-footer">
-        <a href="/">Back to Gallery</a>
       </div>
     </div>
   </div>
@@ -201,22 +225,9 @@
 
 <script src="/js/app.js"></script>
 <script>
-// Redirect if already logged in
 if (isLoggedIn()) {
-  const user = getUser();
-  location.href = user?.role === 'admin' ? '/admin' : '/dashboard';
+  location.href = '/dashboard';
 }
-
-// Check URL param
-const urlMode = new URLSearchParams(location.search).get('mode');
-if (urlMode === 'register') switchTab('register');
-
-function showError(msg) {
-  const el = document.getElementById('errorMsg');
-  el.textContent = msg;
-  el.classList.add('show');
-}
-function hideError() { document.getElementById('errorMsg').classList.remove('show'); }
 
 function switchTab(tab) {
   document.getElementById('loginForm').style.display = tab === 'login' ? 'flex' : 'none';
@@ -226,46 +237,98 @@ function switchTab(tab) {
   hideError();
 }
 
+function showError(message) {
+  const box = document.getElementById('errorMsg');
+  box.textContent = message;
+  box.classList.add('show');
+}
+
+function hideError() {
+  const box = document.getElementById('errorMsg');
+  box.classList.remove('show');
+  box.textContent = '';
+}
+
 async function doLogin() {
   hideError();
-  const email = document.getElementById('loginEmail').value.trim();
+  const login = document.getElementById('loginIdentifier').value.trim();
   const password = document.getElementById('loginPass').value;
-  if (!email || !password) { showError('Please fill in all fields'); return; }
+  if (!login || !password) {
+    showError('Email/username and password are required');
+    return;
+  }
+
   try {
-    const res = await apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+    const res = await apiFetch('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ login, password })
+    });
     setAuth(res.token, res.user);
-    toast('Welcome back, ' + res.user.name + '!', 'success');
-    setTimeout(() => location.href = res.user.role === 'admin' ? '/admin' : '/dashboard', 800);
-  } catch(e) { showError(e.message); }
+    toast(`${t('welcomeBack')}, ${res.user.name}!`, 'success');
+    setTimeout(() => location.href = '/dashboard', 800);
+  } catch (e) {
+    showError(e.message);
+  }
 }
 
 async function doRegister() {
   hideError();
   const name = document.getElementById('regName').value.trim();
+  const username = document.getElementById('regUsername').value.trim();
   const email = document.getElementById('regEmail').value.trim();
   const password = document.getElementById('regPass').value;
   const pass2 = document.getElementById('regPass2').value;
   const major = document.getElementById('regMajor').value;
   const year = document.getElementById('regYear').value;
   const bio = document.getElementById('regBio').value.trim();
-  if (!name || !email || !password) { showError('Name, email and password are required'); return; }
-  if (password !== pass2) { showError('Passwords do not match'); return; }
-  if (password.length < 6) { showError('Password must be at least 6 characters'); return; }
+
+  if (!name || !username || !email || !password || !major) {
+    showError('Name, username, email, password and profession are required');
+    return;
+  }
+  if (password !== pass2) {
+    showError(t('passwordsDoNotMatch'));
+    return;
+  }
+  if (password.length < 6) {
+    showError(t('passwordTooShort'));
+    return;
+  }
+
   try {
-    const res = await apiFetch('/api/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password, major, year, bio }) });
-    setAuth(res.token, res.user);
-    toast('Welcome to MMS Gallery, ' + res.user.name + '!', 'success');
-    setTimeout(() => location.href = '/dashboard', 800);
-  } catch(e) { showError(e.message); }
+    const res = await apiFetch('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        username,
+        email,
+        password,
+        major,
+        profession: major,
+        year,
+        bio,
+        language_pref: getLanguage()
+      })
+    });
+    toast('Account created. Please check your email and verify your account before login.', 'success');
+    switchTab('login');
+    document.getElementById('loginIdentifier').value = email;
+  } catch (e) {
+    showError(e.message);
+  }
 }
 
-// Enter key support
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    if (document.getElementById('loginForm').style.display !== 'none') doLogin();
-    else doRegister();
-  }
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('loginForm').style.display !== 'none') doLogin();
+  else doRegister();
 });
+
+const params = new URLSearchParams(location.search);
+if (params.get('mode') === 'register') switchTab('register');
+if (params.get('verified') === '1') {
+  toast('Email verified successfully. You can now log in.', 'success');
+}
 </script>
 </body>
 </html>

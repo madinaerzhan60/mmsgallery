@@ -28,54 +28,167 @@
 }
 
 .gallery-wrap { padding: 0 48px 80px; }
-.gallery-controls { 
-  display: flex; 
-  gap: 16px; 
-  align-items: center; 
-  margin-bottom: 32px; 
-  flex-wrap: wrap; 
+.gallery-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
 }
+.filters-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.filters-left,
+.filters-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.filters-left { flex: 0 0 auto; }
+.filters-right { flex: 1; justify-content: flex-end; }
 .search-box {
   display: flex;
   align-items: center;
   gap: 10px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
+  border-radius: 9999px;
   padding: 10px 16px;
-  flex: 1;
-  max-width: 320px;
-  transition: border-color 0.3s ease;
+  width: min(100%, 420px);
+  transition: border-color 0.3s ease, background 0.3s ease;
 }
-.search-box:focus-within { border-color: var(--accent-primary); }
-.search-box input { 
-  background: none; 
-  border: none; 
-  color: var(--text-primary); 
-  font-family: inherit; 
-  font-size: 0.95rem; 
-  outline: none; 
-  flex: 1; 
+.search-box:focus-within {
+  border-color: var(--accent-primary);
+  background: var(--card-bg);
+}
+.search-box input {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  flex: 1;
+  min-width: 0;
 }
 .search-box input::placeholder { color: var(--text-muted); }
-.filters-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.sort-select { 
-  background: var(--bg-secondary); 
-  border: 1px solid var(--border-color); 
-  color: var(--text-secondary); 
-  padding: 10px 14px; 
-  border-radius: var(--radius-sm); 
+.filters-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.filters-row::-webkit-scrollbar { height: 6px; }
+.filters-row::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+}
+.sort-select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 10px 14px;
+  border-radius: 9999px;
   font-family: inherit;
-  font-size: 0.85rem; 
-  cursor: pointer; 
-  outline: none; 
-  margin-left: auto; 
+  font-size: 0.85rem;
+  cursor: pointer;
+  outline: none;
+  flex: 0 0 auto;
+}
+.flt,
+.chip-filter,
+.sort-select {
+  font-family: inherit;
+}
+.flt {
+  appearance: none;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-primary);
+  padding: 10px 16px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.flt:hover {
+  border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--border-color));
+  background: rgba(37, 99, 235, 0.05);
+}
+.flt.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.18);
+}
+.chip-filter {
+  appearance: none;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
+  padding: 10px 16px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.chip-filter:hover {
+  border-color: color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
+  background: rgba(37, 99, 235, 0.04);
+  color: var(--text-primary);
+}
+.chip-filter.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.18);
+}
+.filters-chip-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.filters-chip-row::-webkit-scrollbar { height: 6px; }
+.filters-chip-row::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
 }
 
-.masonry { columns: 4; column-gap: 16px; }
+@media (max-width: 780px) {
+  .filters-top-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filters-left,
+  .filters-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .search-box {
+    width: 100%;
+  }
+}
+
+.masonry { 
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
 .m-item { 
   break-inside: avoid; 
-  margin-bottom: 16px; 
   border-radius: var(--radius); 
   overflow: hidden; 
   position: relative; 
@@ -83,11 +196,26 @@
   border: 1px solid var(--border-color);
   background: var(--card-bg);
   transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  aspect-ratio: 1 / 1.1;
+  display: flex;
+  flex-direction: column;
 }
 .m-item:hover { 
   transform: translateY(-4px); 
   box-shadow: var(--card-shadow-hover);
   border-color: var(--accent-primary);
+}
+
+/* Media fills tile fully to prevent letterboxing */
+.m-media,
+.m-item > img,
+.m-item > video,
+.m-item > svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
 }
 .m-info { 
   position: absolute; 
@@ -99,10 +227,11 @@
   opacity: 0; 
   transform: translateY(4px); 
   transition: all 0.3s ease;
+  margin-top: auto;
 }
 .m-item:hover .m-info { opacity: 1; transform: translateY(0); }
-.m-name { font-size: 0.95rem; font-weight: 700; color: white; }
-.m-author { font-size: 0.75rem; color: rgba(255,255,255,0.7); margin-top: 4px; }
+.m-name { font-size: 0.95rem; font-weight: 700; color: white; word-break: break-word; }
+.m-author { font-size: 0.75rem; color: rgba(255,255,255,0.7); margin-top: 4px; word-break: break-word; }
 .m-likes { 
   position: absolute; 
   top: 12px; 
@@ -115,6 +244,7 @@
   font-weight: 500;
   color: white;
   backdrop-filter: blur(8px);
+  z-index: 1;
 }
 
 .load-more { text-align: center; margin-top: 40px; }
@@ -149,7 +279,16 @@
 }
 .lb.open .lb-inner { transform: scale(1); }
 .lb-img { min-height: 420px; overflow: hidden; background: var(--bg-tertiary); position: relative; }
-.lb-img img, .lb-img svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lb-media,
+.lb-img img,
+.lb-img video,
+.lb-img svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
 .lb-details { padding: 32px; display: flex; flex-direction: column; overflow-y: auto; max-height: 80vh; }
 .lb-cat { 
   font-size: 0.7rem; 
@@ -262,9 +401,12 @@
   font-weight: 500;
 }
 
-@media(max-width:1100px) { .masonry { columns: 3; } }
+/* CSS Grid for responsive gallery */
+@media(max-width:1100px) { 
+  .masonry { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); } 
+}
 @media(max-width:768px) { 
-  .masonry { columns: 2; } 
+  .masonry { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; } 
   .gallery-wrap { padding: 0 20px 60px; } 
   .gallery-hero { padding: 110px 24px 40px; } 
   .lb-inner { grid-template-columns: 1fr; } 
@@ -273,7 +415,9 @@
   .lb-prev { left: 10px; }
   .lb-next { right: 60px; }
 }
-@media(max-width:480px) { .masonry { columns: 1; } }
+@media(max-width:480px) { 
+  .masonry { grid-template-columns: 1fr; gap: 16px; } 
+}
 </style>
 </head>
 <body>
@@ -309,7 +453,7 @@
             <button class="btn btn-primary btn-sm" onclick="postComment()">Post</button>
           </div>
           <div id="commentLogin" style="display:none;font-size:0.85rem;color:var(--text-muted)">
-            <a href="/auth" style="color:var(--accent-primary);text-decoration:none;font-weight:500">Log in</a> to comment
+            <a href="/auth" style="color:var(--accent-primary);text-decoration:none;font-weight:500">${t('login')}</a> to comment
           </div>
         </div>
       </div>
@@ -324,34 +468,41 @@
     <ul class="nav-links">
       <li><a href="/">Home</a></li>
       <li><a href="/gallery" class="active">Gallery</a></li>
-      <li><a href="/#artists">Artists</a></li>
+      <li><a href="/artists">Artists</a></li>
+      <li><a href="/hire">Hire</a></li>
+      <li><a href="/contact">Contact</a></li>
     </ul>
     <div class="nav-right" id="navRight"></div>
   </nav>
 
   <div class="gallery-hero">
-    <h1>The <em>Gallery</em></h1>
-    <p>Discover creative projects from our talented students across all digital media disciplines.</p>
+    <h1><span data-i18n="gallery">Gallery</span></h1>
+    <p data-i18n="gallery_hero_desc">Discover creative projects from our talented students across all digital media disciplines.</p>
   </div>
 
   <div class="gallery-wrap">
     <div class="gallery-controls">
-      <div class="search-box">
-        <span style="color:var(--text-muted)">Search</span>
-        <input type="text" id="searchInput" placeholder="works, artists..." oninput="onSearch()">
+      <div class="filters-top-row">
+        <div class="filters-left" id="feedFilters"></div>
+        <div class="filters-right">
+          <div class="search-box">
+            <span style="color:var(--text-muted)" data-i18n="search">Search</span>
+            <input type="text" id="searchInput" placeholder="works, artists..." data-i18n-placeholder="search_works_artists" oninput="onSearch()">
+          </div>
+          <select class="sort-select" id="sortSelect" onchange="onSort()">
+            <option value="newest" data-i18n="newest_first">Newest First</option>
+            <option value="popular" data-i18n="mostLiked">Most Liked</option>
+          </select>
+        </div>
       </div>
-      <div class="filters-row" id="catFilters"></div>
-      <select class="sort-select" id="sortSelect" onchange="onSort()">
-        <option value="newest">Newest First</option>
-        <option value="popular">Most Liked</option>
-      </select>
+      <div class="filters-chip-row" id="catFilters"></div>
     </div>
     <div class="masonry" id="grid"></div>
     <div class="load-more" id="loadMore" style="display:none">
-      <button class="btn btn-ghost" onclick="loadMoreWorks()">Load More Works</button>
+      <button class="btn btn-ghost" onclick="loadMoreWorks()" data-i18n="loadMore">Load More Works</button>
     </div>
     <div class="empty-state" id="emptyState" style="display:none">
-      <p>No works found for this filter.</p>
+      <p data-i18n="noWorksFilter">No works found for this filter.</p>
     </div>
   </div>
 
@@ -359,50 +510,103 @@
   <footer>
     <div class="footer-content">
       <div class="footer-col">
-        <h4>About</h4>
-        <p>MMS Gallery is the official student multimedia exhibition platform for SDU University.</p>
+        <h4 data-i18n="footer_about">About</h4>
+        <p data-i18n="aboutText">MMS Gallery is the official student multimedia exhibition platform for SDU University.</p>
       </div>
       <div class="footer-col">
-        <h4>Contact</h4>
-        <p><a href="mailto:info@sdu.edu.kz">Contact Us</a></p>
+        <h4 data-i18n="contact">Contact</h4>
+        <p><a href="mailto:info@sdu.edu.kz" data-i18n="contactUs">Contact Us</a></p>
       </div>
       <div class="footer-col">
-        <h4>Address</h4>
+        <h4 data-i18n="address_label">Address</h4>
         <address>SDU University<br>Almaty, Abylai Khan str. 1/1<br>Kaskelen 040900</address>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>2025 MMS Gallery - SDU University</span>
+      <span data-i18n="footerCopy">2025 MMS Gallery - SDU University</span>
     </div>
   </footer>
 </div>
 
 <script src="/js/app.js"></script>
 <script>
-const CATS = ['all', 'digital', 'photography', '3d', 'illustration', 'video', 'interactive'];
+const CATS = [
+  { value: 'all', label: 'all' },
+  { value: 'Digital Art', label: 'Digital Art' },
+  { value: '3D', label: '3D' },
+  { value: 'Animation', label: 'Animation' },
+  { value: 'Photography', label: 'Photography' },
+  { value: 'VFX', label: 'VFX' },
+  { value: 'UX/UI', label: 'UX/UI' },
+  { value: 'Game Art', label: 'Game Art' },
+  { value: 'Illustration', label: 'Illustration' },
+  { value: 'Video', label: 'Video' },
+  { value: 'Interactive', label: 'Interactive' },
+  { value: 'Other', label: 'Other' }
+];
 let page = 1, loading = false, hasMore = true, currentCat = 'all', currentSearch = '', currentSort = 'newest';
 let lbArtwork = null;
 let allWorks = []; // Store all loaded works for navigation
 let currentIndex = 0; // Current artwork index in lightbox
 const HEIGHTS = [180, 240, 200, 160, 280, 220, 190, 250, 170, 230, 200, 260];
+let feedMode = 'all';
+
+function isVideoArtwork(artwork) {
+  const type = (artwork.file_type || '').toLowerCase();
+  const category = (artwork.category || '').toLowerCase();
+  return type === 'video' || category === 'video';
+}
+
+function renderArtworkTileMedia(artwork, fallbackSeed) {
+  if (isVideoArtwork(artwork) && artwork.file_url) {
+    return `<video class="m-media" src="${artwork.file_url}" poster="${artwork.thumbnail_url || artwork.image_url || ''}" muted loop playsinline preload="metadata"></video>`;
+  }
+
+  if (artwork.image_url) {
+    return `<img class="m-media" src="${artwork.image_url}" alt="${artwork.title || 'Artwork'}">`;
+  }
+
+  return artSVG(artwork.id, 300, HEIGHTS[fallbackSeed % HEIGHTS.length]);
+}
 
 // Filters
 const catFilter = document.getElementById('catFilters');
 CATS.forEach(c => {
   const btn = document.createElement('button');
-  btn.className = 'flt' + (c === 'all' ? ' active' : '');
-  btn.textContent = c === 'all' ? 'All' : c.charAt(0).toUpperCase() + c.slice(1);
+  btn.className = 'chip-filter' + (c.value === 'all' ? ' active' : '');
+  btn.textContent = c.value === 'all' ? t('allWorks') : t(c.label);
   btn.onclick = () => { 
-    currentCat = c; 
+    currentCat = c.value;
     page = 1; 
     hasMore = true; 
     allWorks = [];
-    document.querySelectorAll('.flt').forEach(b => b.classList.remove('active')); 
+    catFilter.querySelectorAll('.chip-filter').forEach(b => b.classList.remove('active')); 
     btn.classList.add('active'); 
     document.getElementById('grid').innerHTML = ''; 
     fetchWorks(); 
   };
   catFilter.appendChild(btn);
+});
+
+const feedFilters = document.getElementById('feedFilters');
+[
+  { key: 'all', label: t('allWorks') },
+  { key: 'following', label: t('followingFeed') }
+].forEach((tab, idx) => {
+  const btn = document.createElement('button');
+  btn.className = 'flt' + (idx === 0 ? ' active' : '');
+  btn.textContent = tab.label;
+  btn.onclick = () => {
+    feedMode = tab.key;
+    page = 1;
+    hasMore = true;
+    allWorks = [];
+    document.getElementById('grid').innerHTML = '';
+    feedFilters.querySelectorAll('.flt').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    fetchWorks();
+  };
+  feedFilters.appendChild(btn);
 });
 
 let searchTimer;
@@ -429,9 +633,44 @@ function onSort() {
 async function fetchWorks() {
   if (loading || !hasMore) return;
   loading = true;
-  const params = new URLSearchParams({ limit: 16, page, ...(currentCat !== 'all' ? { category: currentCat } : {}), ...(currentSearch ? { search: currentSearch } : {}) });
   try {
-    let works = await apiFetch('/api/artworks?' + params);
+    let works = [];
+    if (feedMode === 'following') {
+      if (!isLoggedIn()) {
+        works = [];
+        hasMore = false;
+        document.getElementById('loadMore').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'block';
+        document.getElementById('emptyState').innerHTML = `<p><a href="/auth" style="color:var(--accent-primary)">${t('login')}</a> to view ${t('followingFeed').toLowerCase()}.</p>`;
+        loading = false;
+        return;
+      }
+      works = await apiFetch('/api/feed/following');
+      hasMore = false;
+      document.getElementById('loadMore').style.display = 'none';
+      if (currentCat !== 'all') works = works.filter((w) => (w.category || '') === currentCat);
+      if (currentSearch) {
+        const query = currentSearch.toLowerCase();
+        works = works.filter((w) => (w.title || '').toLowerCase().includes(query) || (w.description || '').toLowerCase().includes(query));
+      }
+    } else {
+      const params = new URLSearchParams({ limit: 16, page, ...(currentCat !== 'all' ? { category: currentCat } : {}), ...(currentSearch ? { search: currentSearch } : {}) });
+      works = await apiFetch('/api/artworks?' + params);
+    }
+
+    works = works.map((w) => ({
+      ...w,
+      likes: Number(w.likes ?? w.likes_count ?? 0),
+      comments: Number(w.comments ?? w.comments_count ?? 0),
+      author: w.author || {
+        uuid: w.author_uuid,
+        username: w.author_username,
+        name: w.author_name,
+        major: w.author_major,
+        year: w.author_year
+      }
+    }));
+
     if (works.length < 16) { hasMore = false; document.getElementById('loadMore').style.display = 'none'; }
     else document.getElementById('loadMore').style.display = 'block';
     if (currentSort === 'popular') works = works.sort((a, b) => (b.likes || 0) - (a.likes || 0));
@@ -445,13 +684,22 @@ async function fetchWorks() {
       const globalIndex = allWorks.length - works.length + i;
       const item = document.createElement('div');
       item.className = 'reveal m-item';
-      item.innerHTML = w.image_url
-        ? `<img src="${w.image_url}" style="width:100%;max-height:280px;object-fit:cover;display:block">`
-        : artSVG(w.id, 300, HEIGHTS[(i + (page - 1) * 16) % HEIGHTS.length]);
+      item.innerHTML = renderArtworkTileMedia(w, i + (page - 1) * 16);
       item.innerHTML += `
         <div class="m-info"><div class="m-name">${w.title}</div><div class="m-author">${w.author?.name || ''}</div></div>
-        <div class="m-likes">${w.likes || 0} likes</div>`;
+        <div class="m-likes">${w.likes || 0} ${t('likes')}</div>`;
       item.addEventListener('click', () => openLb(w, globalIndex));
+      item.addEventListener('mouseenter', () => {
+        const media = item.querySelector('video');
+        if (media) media.play().catch(() => {});
+      });
+      item.addEventListener('mouseleave', () => {
+        const media = item.querySelector('video');
+        if (media) {
+          media.pause();
+          media.currentTime = 0;
+        }
+      });
       grid.appendChild(item);
     });
     page++;
@@ -478,13 +726,19 @@ function updateLbContent(a) {
   document.getElementById('lbTags').innerHTML = (a.tags || []).map(t => `<span class="badge badge-primary">${t}</span>`).join('');
   const authorEl = document.getElementById('lbAuthor');
   authorEl.textContent = a.author?.name || 'Unknown';
-  authorEl.href = a.author?.uuid ? '/artist/' + a.author.uuid : '#';
+  authorEl.href = (a.author?.username || a.author?.uuid) ? '/profile/' + (a.author.username || a.author.uuid) : '#';
   authorEl.onmouseover = function() { this.style.textDecoration = 'underline'; };
   authorEl.onmouseout = function() { this.style.textDecoration = 'none'; };
   document.getElementById('lbAuthorSub').textContent = (a.author?.major || '') + (a.author?.year ? ' - ' + a.author.year : '');
-  document.getElementById('lbLikes').textContent = (a.likes || 0) + ' likes';
+  document.getElementById('lbLikes').textContent = (a.likes || 0) + ' ' + t('likes');
   const imgWrap = document.getElementById('lbImg');
-  imgWrap.innerHTML = a.image_url ? `<img src="${a.image_url}" alt="${a.title}" style="width:100%;min-height:420px;object-fit:cover">` : artSVG(a.id, 500, 500);
+  if (isVideoArtwork(a) && a.file_url) {
+    imgWrap.innerHTML = `<video class="lb-media" src="${a.file_url}" poster="${a.thumbnail_url || a.image_url || ''}" controls autoplay playsinline preload="metadata"></video>`;
+  } else {
+    imgWrap.innerHTML = a.image_url
+      ? `<img class="lb-media" src="${a.image_url}" alt="${a.title}">`
+      : artSVG(a.id, 500, 500);
+  }
   document.getElementById('commentRow').style.display = isLoggedIn() ? 'flex' : 'none';
   document.getElementById('commentLogin').style.display = isLoggedIn() ? 'none' : 'block';
   document.getElementById('lbCounter').textContent = `${currentIndex + 1} / ${allWorks.length}`;
@@ -531,7 +785,7 @@ async function toggleLike() {
   try {
     const res = await apiFetch('/api/artworks/' + lbArtwork.uuid + '/like', { method: 'POST' });
     document.getElementById('lbLikeBtn').textContent = (res.liked ? 'Liked' : 'Like');
-    document.getElementById('lbLikes').textContent = res.likes + ' likes';
+    document.getElementById('lbLikes').textContent = res.likes + ' ' + t('likes');
   } catch(e) { toast(e.message, 'error'); }
 }
 
@@ -539,7 +793,7 @@ async function loadComments(uuid) {
   const list = document.getElementById('commentsList');
   try {
     const c = await apiFetch('/api/artworks/' + uuid + '/comments');
-    list.innerHTML = c.length ? c.map(x => `<div class="comment-item"><span class="comment-author">${x.name}:</span> ${x.content}</div>`).join('') : '<p style="font-size:0.85rem;color:var(--text-muted);font-style:italic">No comments yet.</p>';
+    list.innerHTML = c.length ? c.map(x => `<div class="comment-item"><span class="comment-author">${x.name}:</span> ${x.content}</div>`).join('') : `<p style="font-size:0.85rem;color:var(--text-muted);font-style: normal">${t('noCommentsYet') || 'No comments yet.'}</p>`;
   } catch {}
 }
 async function postComment() {

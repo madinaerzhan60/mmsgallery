@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MMS Gallery - Settings</title>
+<link rel="stylesheet" href="/css/theme.css">
+<style>
+.page-shell { padding: 112px 32px 48px; max-width: 1280px; margin: 0 auto; }
+.settings-layout { display: grid; grid-template-columns: 1fr 3fr; gap: 18px; }
+.settings-sidebar, .section-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: var(--card-shadow);
+}
+.settings-sidebar { padding: 16px; position: sticky; top: 96px; height: fit-content; }
+.profile-mini { text-align: center; border-bottom: 1px solid var(--border-light); padding-bottom: 14px; margin-bottom: 12px; }
+.profile-mini .avatar { width: 92px; height: 92px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent-primary); background: var(--bg-tertiary); }
+.profile-mini .name { margin-top: 10px; font-size: 1rem; font-weight: 700; }
+.profile-mini .profession { margin-top: 4px; color: var(--text-muted); font-size: 0.83rem; }
+.menu-list { display: grid; gap: 8px; }
+.menu-btn {
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.menu-btn.active { border-color: var(--accent-primary); color: var(--accent-primary); background: var(--accent-light); }
+.content-stack { display: grid; gap: 14px; }
+.section-card { padding: 16px; }
+.section-card .title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+.cover-box {
+  min-height: 220px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: 12px;
+}
+.cover-overlay { width: 100%; display: flex; justify-content: flex-end; }
+.cover-presets { margin-top: 10px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.cover-preset { height: 42px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; }
+.cover-preset.active { border-color: var(--accent-primary); }
+.avatar-row { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+.avatar-preview-box {
+  width: 120px;
+  height: 120px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+.avatar-preview-box.circle { border-radius: 50%; }
+.avatar-preview-box img { width: 100%; height: 100%; object-fit: cover; }
+.crop-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.form-group { display: grid; gap: 6px; }
+.icon-input { position: relative; }
+.icon-input .icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+.icon-input input { padding-left: 34px; }
+.counter { text-align: right; color: var(--text-muted); font-size: 0.75rem; }
+.switch-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+}
+.switch {
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: #cbd5e1;
+  position: relative;
+  cursor: pointer;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  top: 2px;
+  left: 2px;
+  transition: transform .2s ease;
+}
+.switch.on { background: var(--accent-primary); }
+.switch.on::after { transform: translateX(20px); }
+.full-save { width: 100%; justify-content: center; }
+.save-status { margin-top: 8px; font-size: 0.85rem; color: var(--text-muted); min-height: 1.2rem; }
+.strength-wrap { margin-top: 4px; }
+.strength-bar { height: 8px; border-radius: 8px; background: var(--border-light); overflow: hidden; }
+.strength-fill { height: 100%; width: 0; background: #ef4444; transition: all .2s ease; }
+.strength-label { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); }
+.theme-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.theme-card {
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.theme-card.active { border-color: var(--accent-primary); color: var(--accent-primary); }
+.lang-row { display: flex; gap: 8px; }
+.lang-btn { min-width: 66px; }
+.lang-btn.active { border-color: var(--accent-primary); color: var(--accent-primary); background: var(--accent-light); }
+.danger-zone {
+  margin-top: 12px;
+  border: 1px solid rgba(239,68,68,0.35);
+  border-left: 4px solid #ef4444;
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(239,68,68,0.04);
+}
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2,6,23,0.58);
+  z-index: 300;
+  padding: 16px;
+}
+.modal.open { display: flex; }
+.modal-card {
+  width: min(480px, 96vw);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+}
+.hidden { display: none !important; }
+
+@media (max-width: 980px) {
+  .page-shell { padding: 96px 16px 28px; }
+  .settings-layout { grid-template-columns: 1fr; }
+  .settings-sidebar { position: static; }
+  .menu-list { grid-template-columns: repeat(3, minmax(0, 1fr)); display: grid; }
+}
+@media (max-width: 700px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .theme-cards { grid-template-columns: 1fr; }
+  .menu-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cover-presets { grid-template-columns: repeat(3, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="bg-shapes"><div class="bg-shape bg-shape-1"></div><div class="bg-shape bg-shape-2"></div><div class="bg-shape bg-shape-3"></div></div>
+<div class="page">
+  <nav>
+    <a href="/" class="nav-logo">mmsgallery<small>SDU Student Exhibition</small></a>
+    <ul class="nav-links"><li><a href="/">Home</a></li><li><a href="/gallery">Gallery</a></li><li><a href="/artists">Artists</a></li><li><a href="/hire">Hire</a></li><li><a href="/contact">Contact</a></li></ul>
+    <div class="nav-right" id="navRight"></div>
+  </nav>
+
+  <main class="page-shell">
+    <div class="settings-layout">
+      <aside class="settings-sidebar reveal">
+        <div class="profile-mini">
+          <img id="miniAvatar" class="avatar" alt="User avatar">
+          <div id="miniName" class="name">-</div>
+          <div id="miniProfession" class="profession">-</div>
+        </div>
+        <div class="menu-list" id="settingsMenu"></div>
+      </aside>
+
+      <section class="content-stack reveal">
+        <article class="section-card" data-section="profile">
+          <div class="title" id="titleProfile" data-i18n="profile">Профиль</div>
+
+          <div class="cover-box" id="coverBox">
+            <div class="cover-overlay">
+              <button class="btn btn-primary btn-sm" onclick="document.getElementById('coverInput').click()" data-i18n="changeCover">Change Cover</button>
+            </div>
+          </div>
+          <input id="coverInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden">
+
+          <div class="cover-presets" id="coverPresets"></div>
+
+          <div class="avatar-row">
+            <div id="avatarPreviewBox" class="avatar-preview-box circle">
+              <img id="avatarPreview" alt="Avatar preview">
+            </div>
+            <div>
+              <div class="crop-tools">
+                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('avatarInput').click()" data-i18n="changePhoto">Change Photo</button>
+              </div>
+              <input id="avatarInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden">
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top:14px">
+            <div class="form-group">
+              <label class="form-label">Full Name *</label>
+              <input id="name" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Username</label>
+              <input id="handle" class="form-input" placeholder="my_username">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:12px">
+            <label class="form-label">Bio</label>
+            <textarea id="bio" class="form-textarea" maxlength="200" style="min-height:110px"></textarea>
+            <div class="counter"><span id="bioCounter">0</span>/200</div>
+          </div>
+
+          <div class="grid-2" style="margin-top:12px">
+            <div class="form-group">
+              <label class="form-label">Year of Study</label>
+              <select id="year" class="form-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Profession</label>
+              <select id="profession" class="form-select"></select>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top:12px">
+            <div class="form-group">
+              <label class="form-label">LinkedIn URL</label>
+              <div class="icon-input"><span class="icon">in</span><input id="linkedin" class="form-input" placeholder="https://linkedin.com/in/..." type="url"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Portfolio URL</label>
+              <div class="icon-input"><span class="icon">#</span><input id="portfolio" class="form-input" placeholder="https://your-portfolio.com" type="url"></div>
+            </div>
+          </div>
+
+          <div class="switch-row" style="margin-top:12px">
+            <div>
+              <div style="font-weight:700" data-i18n="openToWork">Open to Work</div>
+              <div class="text-muted" style="font-size:.85rem" data-i18n="openToWorkBadgeHint">When enabled, profile gets green OPEN TO WORK badge.</div>
+            </div>
+            <button id="openToWorkToggle" class="switch" type="button"></button>
+          </div>
+
+          <button id="saveProfileBtn" class="btn btn-primary full-save" style="margin-top:14px">
+            <span id="saveProfileText" data-i18n="saveProfile">Save Profile</span>
+          </button>
+          <div id="saveProfileStatus" class="save-status"></div>
+        </article>
+
+        <article class="section-card hidden" data-section="account">
+          <div class="title" id="titleAccount" data-i18n="account">Аккаунт</div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label" data-i18n="currentEmailMasked">Current email (masked)</label>
+              <input id="maskedEmail" class="form-input" disabled>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="newEmail">New email</label>
+              <input id="newEmail" class="form-input" type="email" placeholder="name@sdu.edu.kz">
+            </div>
+          </div>
+          <div class="grid-2" style="margin-top:12px">
+            <div class="form-group">
+              <label class="form-label" data-i18n="passwordConfirmation">Password confirmation</label>
+              <input id="emailPassword" class="form-input" type="password" placeholder="Current password">
+            </div>
+            <div class="form-group" style="align-content:end">
+              <button id="updateEmailBtn" class="btn btn-primary" data-i18n="updateEmail">Update Email</button>
+            </div>
+          </div>
+
+          <div class="title" style="margin-top:18px" data-i18n="changePassword">Change Password</div>
+          <div class="grid-3">
+            <div class="form-group">
+              <label class="form-label" data-i18n="currentPassword">Current password</label>
+              <input id="currentPass" class="form-input" type="password">
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="newPassword">New password</label>
+              <input id="newPass" class="form-input" type="password">
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="confirmNewPassword">Confirm new password</label>
+              <input id="confirmPass" class="form-input" type="password">
+            </div>
+          </div>
+          <div class="strength-wrap">
+            <div class="strength-bar"><div id="strengthFill" class="strength-fill"></div></div>
+            <div id="strengthLabel" class="strength-label" data-i18n="weak">Weak</div>
+          </div>
+          <button id="updatePasswordBtn" class="btn btn-primary" style="margin-top:10px" data-i18n="updatePassword">Update Password</button>
+
+          <div class="danger-zone">
+            <div style="font-weight:700;color:#b91c1c" data-i18n="dangerZone">Danger Zone</div>
+            <p style="margin-top:6px;color:var(--text-muted)">Deleting your account is permanent and cannot be undone.</p>
+            <button class="btn btn-danger" style="margin-top:10px" onclick="openDeleteModal()" data-i18n="deleteAccount">Delete Account</button>
+          </div>
+
+          <div id="accountStatus" class="save-status"></div>
+        </article>
+
+        <article class="section-card hidden" data-section="appearance">
+          <div class="title" id="titleAppearance" data-i18n="appearance">Внешний вид</div>
+          <div class="theme-cards">
+            <button class="theme-card" id="lightCard" onclick="setThemeCard('light')" data-i18n="lightMode">☀️ Light Mode</button>
+            <button class="theme-card" id="darkCard" onclick="setThemeCard('dark')" data-i18n="darkMode">🌙 Dark Mode</button>
+          </div>
+
+          <div class="title" style="margin-top:18px" data-i18n="language">Language</div>
+          <div class="lang-row">
+            <button class="btn btn-ghost lang-btn" id="langKk" onclick="setLang('kk')">KZ</button>
+            <button class="btn btn-ghost lang-btn" id="langEn" onclick="setLang('en')">EN</button>
+            <button class="btn btn-ghost lang-btn" id="langRu" onclick="setLang('ru')">RU</button>
+          </div>
+        </article>
+
+        <article class="section-card hidden" data-section="notifications">
+          <div class="title" id="titleNotifications" data-i18n="notifications">Уведомления</div>
+          <div class="content-stack" style="gap:10px">
+            <div class="switch-row"><span data-i18n="newFollower">New follower</span><button class="switch notify-toggle" data-key="notify_followers"></button></div>
+            <div class="switch-row"><span data-i18n="someoneLikedYourWork">Someone liked your work</span><button class="switch notify-toggle" data-key="notify_likes"></button></div>
+            <div class="switch-row"><span data-i18n="someoneCommentedOnYourWork">Someone commented on your work</span><button class="switch notify-toggle" data-key="notify_comments"></button></div>
+            <div class="switch-row"><span data-i18n="yourWorkWasApproved">Your work was approved</span><button class="switch notify-toggle" data-key="notify_approval"></button></div>
+            <div class="switch-row"><span data-i18n="yourWorkWasRejected">Your work was rejected</span><button class="switch notify-toggle" data-key="notify_rejection"></button></div>
+            <div class="switch-row"><span data-i18n="platformAnnouncements">Platform announcements</span><button class="switch notify-toggle" data-key="notify_announcements"></button></div>
+          </div>
+          <button id="saveNotifyBtn" class="btn btn-primary" style="margin-top:12px" data-i18n="savePreferences">Save Preferences</button>
+          <div id="notifyStatus" class="save-status"></div>
+        </article>
+
+        <article class="section-card hidden" data-section="privacy">
+          <div class="title" id="titlePrivacy" data-i18n="privacy">Конфиденциальность</div>
+          <div class="content-stack" style="gap:10px">
+            <div class="switch-row"><span data-i18n="showEmailOnProfile">Show email on profile</span><button class="switch privacy-toggle" data-key="privacy_show_email"></button></div>
+            <div class="switch-row"><span data-i18n="showInOpenToWorkTab">Show in Open to Work tab</span><button class="switch privacy-toggle" data-key="privacy_show_open_to_work"></button></div>
+            <div class="switch-row"><span data-i18n="allowFollowers">Allow followers</span><button class="switch privacy-toggle" data-key="privacy_allow_followers"></button></div>
+            <div class="switch-row"><span data-i18n="showFollowerCountPublicly">Show follower count publicly</span><button class="switch privacy-toggle" data-key="privacy_show_follower_count"></button></div>
+          </div>
+          <button id="savePrivacyBtn" class="btn btn-primary" style="margin-top:12px" data-i18n="savePreferences">Save Preferences</button>
+          <div id="privacyStatus" class="save-status"></div>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <footer></footer>
+</div>
+
+<div class="modal" id="deleteModal">
+  <div class="modal-card">
+    <h3 style="font-size:1.1rem;font-weight:800" data-i18n="deleteAccount">Delete Account</h3>
+    <p style="margin-top:8px;color:var(--text-muted)" data-i18n="deleteAccountHelp">Type your email to confirm deletion. This action is permanent and cannot be undone.</p>
+    <div class="form-group" style="margin-top:12px">
+      <label class="form-label" data-i18n="emailConfirmation">Email confirmation</label>
+      <input id="deleteEmailInput" class="form-input" placeholder="your@email.com">
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeDeleteModal()" data-i18n="cancel">Cancel</button>
+      <button class="btn btn-danger" onclick="deleteAccountConfirmed()" data-i18n="delete">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+if (!isLoggedIn()) location.href = '/auth';
+
+const sections = ['profile', 'account', 'appearance', 'notifications', 'privacy'];
+const yearOptions = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Graduate'];
+const professionOptions = ['3D Modeler','3D/2D Animator','VFX Artist','Film Editor','Graphic Designer','UX/UI Designer','IoT Engineer','Interior & Architecture Designer','VR/AR Developer','Game Designer','Game Animator','Game Artist','Game Developer','Photographer'];
+const coverPresets = {
+  preset_1: 'linear-gradient(135deg, #1e3a5f, #2563EB)',
+  preset_2: 'linear-gradient(135deg, #0f172a, #7c3aed)',
+  preset_3: 'linear-gradient(135deg, #064e3b, #10b981)',
+  preset_4: 'linear-gradient(135deg, #7f1d1d, #ef4444)',
+  preset_5: 'linear-gradient(135deg, #1c1917, #d97706)'
+};
+
+let currentUser = null;
+let activeSection = 'profile';
+let profileState = {};
+let notifyState = {};
+let privacyState = {};
+let pendingAvatarFile = null;
+let pendingCoverFile = null;
+let pendingCoverPreset = null;
+
+function maskEmail(email = '') {
+  const [left, domain] = String(email).split('@');
+  if (!domain) return email;
+  const safeLeft = left.length <= 2 ? `${left[0] || ''}*` : `${left.slice(0, 2)}***`;
+  return `${safeLeft}@${domain}`;
+}
+
+function setStatus(nodeId, text, ok = true) {
+  const node = document.getElementById(nodeId);
+  if (!node) return;
+  node.textContent = text;
+  node.style.color = ok ? '#059669' : '#dc2626';
+}
+
+function applySwitchState(node, val) {
+  node.classList.toggle('on', !!val);
+  node.dataset.value = val ? '1' : '0';
+}
+
+function switchValue(node) {
+  return node.dataset.value === '1';
+}
+
+function renderMenu() {
+  const menu = document.getElementById('settingsMenu');
+  const labels = {
+    profile: t('profile'),
+    account: t('account'),
+    appearance: t('appearance'),
+    notifications: t('notifications'),
+    privacy: t('privacy')
+  };
+  menu.innerHTML = sections.map((s) => `<button class="menu-btn ${s === activeSection ? 'active' : ''}" data-sec="${s}">${labels[s]}</button>`).join('');
+  menu.querySelectorAll('.menu-btn').forEach((btn) => {
+    btn.addEventListener('click', () => showSection(btn.dataset.sec));
+  });
+
+  document.getElementById('titleProfile').textContent = labels.profile;
+  document.getElementById('titleAccount').textContent = labels.account;
+  document.getElementById('titleAppearance').textContent = labels.appearance;
+  document.getElementById('titleNotifications').textContent = labels.notifications;
+  document.getElementById('titlePrivacy').textContent = labels.privacy;
+}
+
+function showSection(sec) {
+  activeSection = sec;
+  document.querySelectorAll('[data-section]').forEach((panel) => panel.classList.toggle('hidden', panel.dataset.section !== sec));
+  renderMenu();
+}
+
+function renderCover() {
+  const box = document.getElementById('coverBox');
+  if (pendingCoverFile) {
+    box.style.background = `center / cover no-repeat url('${URL.createObjectURL(pendingCoverFile)}')`;
+    return;
+  }
+  if (currentUser.cover_url) {
+    box.style.background = `center / cover no-repeat url('${currentUser.cover_url}')`;
+    return;
+  }
+  const key = pendingCoverPreset || currentUser.cover_gradient || 'preset_1';
+  box.style.background = coverPresets[key] || coverPresets.preset_1;
+}
+
+function renderCoverPresets() {
+  const root = document.getElementById('coverPresets');
+  const active = pendingCoverPreset || currentUser.cover_gradient || 'preset_1';
+  root.innerHTML = Object.entries(coverPresets).map(([key, gradient]) => `<button class="cover-preset ${key === active ? 'active' : ''}" data-key="${key}" style="background:${gradient}"></button>`).join('');
+  root.querySelectorAll('.cover-preset').forEach((node) => {
+    node.addEventListener('click', async () => {
+      pendingCoverFile = null;
+      pendingCoverPreset = node.dataset.key;
+      renderCover();
+      renderCoverPresets();
+      try {
+        const res = await apiFetch('/api/users/cover', { method: 'PATCH', body: JSON.stringify({ cover_gradient: pendingCoverPreset }) });
+        currentUser = res.user;
+        setAuth(getToken(), currentUser);
+        toast(t('coverPresetApplied'), 'success');
+      } catch (e) {
+        toast(e.message, 'error');
+      }
+    });
+  });
+}
+
+async function toSquare(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const size = Math.min(img.width, img.height);
+      const c = document.createElement('canvas');
+      c.width = size;
+      c.height = size;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, (img.width - size) / 2, (img.height - size) / 2, size, size, 0, 0, size, size);
+      c.toBlob((blob) => {
+        if (!blob) return reject(new Error('Failed to process image'));
+        resolve(new File([blob], file.name, { type: 'image/png' }));
+      }, 'image/png', 0.92);
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function passwordStrength(v) {
+  let score = 0;
+  if (v.length >= 8) score += 1;
+  if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score += 1;
+  if (/\d/.test(v) && /[^A-Za-z0-9]/.test(v)) score += 1;
+  return score;
+}
+
+function updateStrength() {
+  const v = document.getElementById('newPass').value || '';
+  const score = passwordStrength(v);
+  const fill = document.getElementById('strengthFill');
+  const label = document.getElementById('strengthLabel');
+  if (score <= 1) {
+    fill.style.width = '33%';
+    fill.style.background = '#ef4444';
+    label.textContent = t('weak');
+  } else if (score === 2) {
+    fill.style.width = '66%';
+    fill.style.background = '#f59e0b';
+    label.textContent = t('medium');
+  } else {
+    fill.style.width = '100%';
+    fill.style.background = '#10b981';
+    label.textContent = t('strong');
+  }
+}
+
+function setThemeCard(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('mms_theme', theme);
+  updateThemeIcon();
+  document.getElementById('lightCard').classList.toggle('active', theme === 'light');
+  document.getElementById('darkCard').classList.toggle('active', theme === 'dark');
+}
+
+function setLang(lang) {
+  setLanguage(lang);
+  document.getElementById('langKk').classList.toggle('active', lang === 'kk');
+  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+  document.getElementById('langRu').classList.toggle('active', lang === 'ru');
+  renderMenu();
+}
+
+function openDeleteModal() { document.getElementById('deleteModal').classList.add('open'); }
+function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('open'); }
+
+async function deleteAccountConfirmed() {
+  const email = document.getElementById('deleteEmailInput').value.trim();
+  try {
+    await apiFetch('/api/users/account', { method: 'DELETE', body: JSON.stringify({ email_confirmation: email }) });
+    clearAuth();
+    toast(t('accountDeleted'), 'success');
+    location.href = '/';
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function loadUser() {
+  const res = await apiFetch('/api/users/me');
+  currentUser = res.user;
+  profileState = {
+    name: currentUser.name || '',
+    handle: currentUser.username || currentUser.handle || '',
+    bio: currentUser.bio || '',
+    year: currentUser.year || '1st Year',
+    profession: currentUser.profession || 'Graphic Designer',
+    linkedin: currentUser.linkedin_url || '',
+    portfolio: currentUser.portfolio_url || '',
+    is_open_to_work: !!currentUser.is_open_to_work,
+    language_pref: currentUser.language_pref || 'en'
+  };
+
+  notifyState = {
+    notify_followers: !!currentUser.notify_followers,
+    notify_likes: !!currentUser.notify_likes,
+    notify_comments: !!currentUser.notify_comments,
+    notify_approval: !!currentUser.notify_approval,
+    notify_rejection: !!currentUser.notify_rejection,
+    notify_announcements: !!currentUser.notify_announcements
+  };
+
+  privacyState = {
+    privacy_show_email: !!currentUser.privacy_show_email,
+    privacy_show_open_to_work: !!currentUser.privacy_show_open_to_work,
+    privacy_allow_followers: !!currentUser.privacy_allow_followers,
+    privacy_show_follower_count: !!currentUser.privacy_show_follower_count
+  };
+
+  document.getElementById('miniAvatar').src = currentUser.avatar_url || `https://placehold.co/240x240/2563eb/ffffff?text=${encodeURIComponent((currentUser.name || 'U').charAt(0))}`;
+  document.getElementById('miniName').textContent = currentUser.name || 'User';
+  document.getElementById('miniProfession').textContent = t(currentUser.profession || currentUser.major || '-') || currentUser.profession || currentUser.major || '-';
+  document.getElementById('avatarPreview').src = document.getElementById('miniAvatar').src;
+  document.getElementById('maskedEmail').value = maskEmail(currentUser.email || '');
+
+  const yearSel = document.getElementById('year');
+  yearSel.innerHTML = yearOptions.map((y) => `<option value="${y}">${t(y)}</option>`).join('');
+  const professionSel = document.getElementById('profession');
+  professionSel.innerHTML = professionOptions.map((p) => `<option value="${p}">${t(p)}</option>`).join('');
+
+  document.getElementById('name').value = profileState.name;
+  document.getElementById('handle').value = profileState.handle;
+  document.getElementById('bio').value = profileState.bio;
+  document.getElementById('bioCounter').textContent = profileState.bio.length;
+  yearSel.value = profileState.year;
+  professionSel.value = profileState.profession;
+  document.getElementById('linkedin').value = profileState.linkedin;
+  document.getElementById('portfolio').value = profileState.portfolio;
+  applySwitchState(document.getElementById('openToWorkToggle'), profileState.is_open_to_work);
+
+  renderCover();
+  renderCoverPresets();
+  document.getElementById('avatarPreviewBox').classList.add('circle');
+
+  document.querySelectorAll('.notify-toggle').forEach((btn) => {
+    applySwitchState(btn, notifyState[btn.dataset.key]);
+    btn.onclick = () => applySwitchState(btn, !switchValue(btn));
+  });
+
+  document.querySelectorAll('.privacy-toggle').forEach((btn) => {
+    applySwitchState(btn, privacyState[btn.dataset.key]);
+    btn.onclick = () => applySwitchState(btn, !switchValue(btn));
+  });
+
+  const theme = document.documentElement.getAttribute('data-theme') || 'light';
+  setThemeCard(theme);
+  setLang(getLanguage());
+}
+
+function bindEvents() {
+  document.getElementById('bio').addEventListener('input', (e) => {
+    document.getElementById('bioCounter').textContent = e.target.value.length;
+  });
+
+  document.getElementById('openToWorkToggle').addEventListener('click', (e) => {
+    applySwitchState(e.currentTarget, !switchValue(e.currentTarget));
+  });
+
+  document.getElementById('newPass').addEventListener('input', updateStrength);
+
+  document.getElementById('avatarInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) return toast(t('avatarMaxSize3mb'), 'error');
+    pendingAvatarFile = await toSquare(file);
+    document.getElementById('avatarPreview').src = URL.createObjectURL(pendingAvatarFile);
+  });
+
+  document.getElementById('coverInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) return toast(t('coverMaxSize5mb'), 'error');
+    pendingCoverFile = file;
+    pendingCoverPreset = null;
+    renderCover();
+    try {
+      const fd = new FormData();
+      fd.append('cover', file);
+      const res = await apiFetchForm('/api/users/cover', fd, 'PATCH');
+      currentUser = res.user;
+      setAuth(getToken(), currentUser);
+      renderCover();
+      toast(t('coverUpdated'), 'success');
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
+
+  document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveProfileBtn');
+    const text = document.getElementById('saveProfileText');
+    setStatus('saveProfileStatus', '', true);
+
+    const payload = {
+      name: document.getElementById('name').value.trim(),
+      username: document.getElementById('handle').value.trim(),
+      bio: document.getElementById('bio').value.trim(),
+      year: document.getElementById('year').value,
+      profession: document.getElementById('profession').value,
+      linkedin_url: document.getElementById('linkedin').value.trim(),
+      portfolio_url: document.getElementById('portfolio').value.trim(),
+      is_open_to_work: switchValue(document.getElementById('openToWorkToggle')),
+      language_pref: getLanguage(),
+      privacy_show_open_to_work: privacyState.privacy_show_open_to_work
+    };
+
+    if (!payload.name) {
+      setStatus('saveProfileStatus', t('fullNameRequired'), false);
+      return;
+    }
+
+    btn.disabled = true;
+    text.textContent = t('saving');
+    try {
+      const res = await apiFetch('/api/users/profile', { method: 'PATCH', body: JSON.stringify(payload) });
+      currentUser = res.user;
+      setAuth(getToken(), currentUser);
+      document.getElementById('miniName').textContent = currentUser.name || 'User';
+      document.getElementById('miniProfession').textContent = t(currentUser.profession || '-') || currentUser.profession || '-';
+
+      if (pendingAvatarFile) {
+        const fd = new FormData();
+        fd.append('avatar', pendingAvatarFile);
+        const avatarRes = await apiFetchForm('/api/users/avatar', fd, 'PATCH');
+        currentUser = avatarRes.user;
+        setAuth(getToken(), currentUser);
+        document.getElementById('miniAvatar').src = currentUser.avatar_url;
+        pendingAvatarFile = null;
+      }
+
+      text.textContent = t('savedSuccessfully');
+      setStatus('saveProfileStatus', t('savedSuccessfully'), true);
+      toast(t('changesSaved'), 'success');
+      setTimeout(() => { text.textContent = t('saveProfile'); }, 1200);
+    } catch (e) {
+      setStatus('saveProfileStatus', e.message, false);
+      text.textContent = t('saveProfile');
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('updateEmailBtn').addEventListener('click', async () => {
+    try {
+      const res = await apiFetch('/api/users/email', {
+        method: 'PATCH',
+        body: JSON.stringify({ new_email: document.getElementById('newEmail').value.trim(), password: document.getElementById('emailPassword').value })
+      });
+      currentUser = res.user;
+      setAuth(getToken(), currentUser);
+      document.getElementById('maskedEmail').value = maskEmail(currentUser.email || '');
+      setStatus('accountStatus', t('updateEmail'), true);
+      toast(t('updateEmail'), 'success');
+    } catch (e) {
+      setStatus('accountStatus', e.message, false);
+      toast(e.message, 'error');
+    }
+  });
+
+  document.getElementById('updatePasswordBtn').addEventListener('click', async () => {
+    const cur = document.getElementById('currentPass').value;
+    const next = document.getElementById('newPass').value;
+    const confirm = document.getElementById('confirmPass').value;
+    if (next !== confirm) {
+      setStatus('accountStatus', t('passwordsDoNotMatch'), false);
+      return;
+    }
+    try {
+      await apiFetch('/api/users/password', { method: 'PATCH', body: JSON.stringify({ current_password: cur, new_password: next }) });
+      setStatus('accountStatus', t('updatePassword'), true);
+      toast(t('updatePassword'), 'success');
+      document.getElementById('currentPass').value = '';
+      document.getElementById('newPass').value = '';
+      document.getElementById('confirmPass').value = '';
+      updateStrength();
+    } catch (e) {
+      setStatus('accountStatus', e.message, false);
+      toast(e.message, 'error');
+    }
+  });
+
+  document.getElementById('saveNotifyBtn').addEventListener('click', async () => {
+    const payload = {};
+    document.querySelectorAll('.notify-toggle').forEach((btn) => { payload[btn.dataset.key] = switchValue(btn); });
+    try {
+      const res = await apiFetch('/api/users/notifications', { method: 'PATCH', body: JSON.stringify(payload) });
+      currentUser = res.user;
+      setAuth(getToken(), currentUser);
+      setStatus('notifyStatus', t('savePreferences'), true);
+      toast(t('changesSaved'), 'success');
+    } catch (e) {
+      setStatus('notifyStatus', e.message, false);
+      toast(e.message, 'error');
+    }
+  });
+
+  document.getElementById('savePrivacyBtn').addEventListener('click', async () => {
+    const payload = {};
+    document.querySelectorAll('.privacy-toggle').forEach((btn) => { payload[btn.dataset.key] = switchValue(btn); });
+    privacyState = { ...privacyState, ...payload };
+    try {
+      const res = await apiFetch('/api/users/privacy', { method: 'PATCH', body: JSON.stringify(payload) });
+      currentUser = res.user;
+      setAuth(getToken(), currentUser);
+      setStatus('privacyStatus', t('savePreferences'), true);
+      toast(t('changesSaved'), 'success');
+    } catch (e) {
+      setStatus('privacyStatus', e.message, false);
+      toast(e.message, 'error');
+    }
+  });
+}
+
+(async function initPage() {
+  renderMenu();
+  showSection('profile');
+  bindEvents();
+  await loadUser();
+})();
+</script>
+</body>
+</html>

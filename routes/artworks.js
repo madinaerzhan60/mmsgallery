@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|gif|webp|mp4|mov|pdf/;
     cb(null, allowed.test(path.extname(file.originalname).toLowerCase()));
@@ -30,10 +30,17 @@ const upload = multer({
 });
 
 function withStats(artwork) {
-  const likes = db.prepare('SELECT COUNT(*) as c FROM likes WHERE artwork_id=?').get(artwork.id).c;
+  const likesFromTable = db.prepare('SELECT COUNT(*) as c FROM likes WHERE artwork_id=?').get(artwork.id).c;
+  const likes = Number(artwork.likes_count || 0) > likesFromTable ? Number(artwork.likes_count || 0) : likesFromTable;
   const comments = db.prepare('SELECT COUNT(*) as c FROM comments WHERE artwork_id=?').get(artwork.id).c;
-  const author = db.prepare('SELECT id,uuid,name,major,year,avatar_url FROM users WHERE id=?').get(artwork.user_id);
-  return { ...artwork, likes, comments, author, tags: artwork.tags ? artwork.tags.split(',') : [] };
+  const author = db.prepare('SELECT id,uuid,username,name,COALESCE(profession, major) as major,year,avatar_url FROM users WHERE id=?').get(artwork.user_id);
+  return {
+    ...artwork,
+    likes,
+    comments,
+    author,
+    tags: artwork.tags ? artwork.tags.split(',') : []
+  };
 }
 
 // GET /api/artworks  (public, approved)
@@ -41,7 +48,7 @@ router.get('/', (req, res) => {
   const { category, search, featured, page = 1, limit = 20 } = req.query;
   let query = `SELECT a.* FROM artworks a WHERE a.status='approved'`;
   const params = [];
-  if (category && category !== 'all') { query += ` AND a.category=?`; params.push(category); }
+  if (category && category !== 'all') { query += ` AND LOWER(a.category)=LOWER(?)`; params.push(category); }
   if (featured) { query += ` AND a.featured=1`; }
   if (search) { query += ` AND (a.title LIKE ? OR a.description LIKE ?)`; params.push(`%${search}%`, `%${search}%`); }
   query += ` ORDER BY a.created_at DESC LIMIT ? OFFSET ?`;
@@ -71,10 +78,24 @@ router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'f
 
     const image_url = req.files?.image ? `/uploads/${req.files.image[0].filename}` : null;
     const file_url = req.files?.file ? `/uploads/${req.files.file[0].filename}` : null;
+    const fileType = file_url ? 'video' : 'image';
     const uuid = uuidv4();
 
-    db.prepare(`INSERT INTO artworks (uuid,title,description,category,tags,image_url,file_url,status,user_id)
-      VALUES (?,?,?,?,?,?,?,'pending',?)`).run(uuid, title, description||'', category, tags||'', image_url, file_url, req.user.id);
+    db.prepare(`
+      INSERT INTO artworks (uuid, title, description, category, tags, image_url, file_url, thumbnail_url, file_type, status, user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+    `).run(
+      uuid,
+      title,
+      description || '',
+      category,
+      tags || '',
+      image_url,
+      file_url,
+      image_url,
+      fileType,
+      req.user.id
+    );
 
     const artwork = db.prepare('SELECT * FROM artworks WHERE uuid=?').get(uuid);
     res.status(201).json(withStats(artwork));
@@ -94,9 +115,9 @@ router.put('/:uuid', auth, upload.fields([{ name: 'image', maxCount: 1 }]), (req
   const image_url = req.files?.image ? `/uploads/${req.files.image[0].filename}` : a.image_url;
 
   db.prepare(`UPDATE artworks SET title=?,description=?,category=?,tags=?,image_url=?,
-    status=COALESCE(?,status), featured=COALESCE(?,featured) WHERE uuid=?`)
+    thumbnail_url=COALESCE(?, thumbnail_url), status=COALESCE(?,status), featured=COALESCE(?,featured) WHERE uuid=?`)
     .run(title||a.title, description||a.description, category||a.category, tags||a.tags,
-      image_url, status||null, featured!=null?Number(featured):null, req.params.uuid);
+      image_url, image_url, status||null, featured!=null?Number(featured):null, req.params.uuid);
 
   res.json(withStats(db.prepare('SELECT * FROM artworks WHERE uuid=?').get(req.params.uuid)));
 });
@@ -118,10 +139,19 @@ router.post('/:uuid/like', auth, (req, res) => {
   const existing = db.prepare('SELECT id FROM likes WHERE user_id=? AND artwork_id=?').get(req.user.id, a.id);
   if (existing) {
     db.prepare('DELETE FROM likes WHERE user_id=? AND artwork_id=?').run(req.user.id, a.id);
-    res.json({ liked: false, likes: db.prepare('SELECT COUNT(*) as c FROM likes WHERE artwork_id=?').get(a.id).c });
+    const likes = db.prepare('SELECT COUNT(*) as c FROM likes WHERE artwork_id=?').get(a.id).c;
+    db.prepare('UPDATE artworks SET likes_count=? WHERE id=?').run(likes, a.id);
+    res.json({ liked: false, likes });
   } else {
     db.prepare('INSERT INTO likes (user_id, artwork_id) VALUES (?,?)').run(req.user.id, a.id);
-    res.json({ liked: true, likes: db.prepare('SELECT COUNT(*) as c FROM likes WHERE artwork_id=?').get(a.id).c });
+    const likes = db.prepare('SELECT COUNT(*) as c FROM likes WHERE artwork_id=?').get(a.id).c;
+    db.prepare('UPDATE artworks SET likes_count=? WHERE id=?').run(likes, a.id);
+    const owner = db.prepare('SELECT user_id FROM artworks WHERE id=?').get(a.id);
+    if (owner && owner.user_id !== req.user.id) {
+      db.prepare('INSERT INTO notifications (user_id, type, from_user_id, artwork_id) VALUES (?, ?, ?, ?)')
+        .run(owner.user_id, 'like', req.user.id, a.id);
+    }
+    res.json({ liked: true, likes });
   }
 });
 
@@ -148,6 +178,19 @@ router.post('/:uuid/comments', auth, (req, res) => {
 router.get('/user/mine', auth, (req, res) => {
   const rows = db.prepare('SELECT * FROM artworks WHERE user_id=? ORDER BY created_at DESC').all(req.user.id);
   res.json(rows.map(withStats));
+});
+
+router.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'File is too large. Maximum size is 100MB.' });
+    }
+    return res.status(400).json({ error: err.message || 'Upload error' });
+  }
+  if (err) {
+    return res.status(400).json({ error: err.message || 'Upload error' });
+  }
+  return next();
 });
 
 module.exports = router;

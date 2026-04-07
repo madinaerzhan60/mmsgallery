@@ -9,9 +9,12 @@ function auth(req, res, next) {
 
   try {
     const payload = jwt.verify(header.slice(7), JWT_SECRET);
-    const user = db.prepare('SELECT id, uuid, role, name FROM users WHERE id=?').get(payload.id);
+    const user = db.prepare('SELECT id, uuid, role, name, email_verified FROM users WHERE id=?').get(payload.id);
     if (!user || user.uuid !== payload.uuid) {
       return res.status(401).json({ error: 'Session expired. Please log in again' });
+    }
+    if (user.role !== 'admin' && !Number(user.email_verified)) {
+      return res.status(403).json({ error: 'Please verify your email before using this feature' });
     }
     req.user = user;
     next();

@@ -3,10 +3,11 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MMS Gallery - Student Multimedia Exhibition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/theme.css">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap');
-
 /* Custom Logo */
 .brand-logo {
   display: flex;
@@ -35,10 +36,10 @@
   line-height: 1;
 }
 .brand-title {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 1.2rem;
+  font-family: var(--font-body);
+  font-size: var(--text-xl);
   letter-spacing: -0.03em;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-primary);
 }
 .brand-sub {
@@ -58,8 +59,9 @@
   justify-content: center;
   align-items: center;
   text-align: center;
-  padding: 120px 48px 80px;
+  padding: 120px 24px 80px;
   position: relative;
+  overflow: hidden;
 }
 .hero-eyebrow {
   font-size: 0.8rem;
@@ -72,38 +74,56 @@
   animation: fadeUp 0.8s 0.3s ease forwards;
 }
 .hero-title {
-  font-size: clamp(2.5rem, 7vw, 5rem);
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700;
-  line-height: 1.05;
+  font-size: clamp(2.25rem, 5vw, 4.1rem);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  line-height: 1.08;
   letter-spacing: -0.03em;
   color: var(--text-primary);
   opacity: 0;
   animation: fadeUp 0.9s 0.5s ease forwards;
 }
 .hero-shell {
-  max-width: 980px;
+  max-width: 860px;
   width: 100%;
-  padding: 28px 24px;
-  border-radius: 26px;
-  border: 1px solid var(--border-color);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--card-bg) 88%, #ffffff 12%), var(--card-bg));
-  box-shadow: var(--card-shadow-hover);
+  padding: 40px 28px;
+  border-radius: 30px;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 16%, var(--border-color));
+  background:
+    radial-gradient(circle at 18% 18%, rgba(37, 99, 235, 0.20), transparent 34%),
+    radial-gradient(circle at 82% 18%, rgba(14, 165, 233, 0.18), transparent 28%),
+    radial-gradient(circle at 50% 90%, rgba(16, 185, 129, 0.10), transparent 30%),
+    linear-gradient(145deg, color-mix(in srgb, var(--card-bg) 80%, #ffffff 20%), color-mix(in srgb, var(--bg-secondary) 74%, #dbeafe 26%));
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.10);
   position: relative;
   overflow: hidden;
 }
 .hero-shell::before {
   content: '';
   position: absolute;
-  width: 240px;
-  height: 240px;
+  width: 320px;
+  height: 320px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(14,165,233,0.2), transparent 68%);
-  top: -120px;
-  right: -80px;
+  background: radial-gradient(circle, rgba(14,165,233,0.22), transparent 68%);
+  top: -150px;
+  right: -110px;
+  pointer-events: none;
+}
+.hero-shell::after {
+  content: '';
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(37,99,235,0.14), transparent 70%);
+  left: -120px;
+  bottom: -120px;
+  pointer-events: none;
 }
 .hero-title em {
+  font-family: var(--font-heading);
   font-style: normal;
+  font-weight: 700;
   color: var(--accent-primary);
 }
 .hero-ribbon {
@@ -119,10 +139,10 @@
   background: var(--bg-secondary);
 }
 .hero-sub {
-  font-size: 1.2rem;
+  font-size: 1.02rem;
   color: var(--text-muted);
   margin-top: 24px;
-  max-width: 520px;
+  max-width: 620px;
   line-height: 1.7;
   opacity: 0;
   animation: fadeUp 0.9s 0.7s ease forwards;
@@ -159,7 +179,8 @@
   color: var(--text-secondary);
 }
 .stat-num { 
-  font-size: 2.5rem; 
+  font-family: var(--font-body);
+  font-size: 1.8rem;
   font-weight: 800; 
   color: var(--accent-primary); 
   line-height: 1; 
@@ -526,6 +547,7 @@
 
 @media(max-width:1100px) { .masonry { columns: 3; } .artists-row { grid-template-columns: repeat(2, 1fr); } }
 @media(max-width:768px) { .masonry { columns: 2; } .lb-inner { grid-template-columns: 1fr; } .hero { padding: 100px 24px 60px; } .hero-shell { padding: 20px 14px; border-radius: 18px; } .idea-strip { margin: -10px 20px 10px; } .hero-stats { gap: 24px; } .artists-list { grid-template-columns: 1fr; } .lb-nav { width: 40px; height: 40px; font-size: 1.1rem; } .lb-prev { left: 10px; } .lb-next { right: 60px; } }
+@media(max-width:768px) { .masonry { columns: 2; } .lb-inner { grid-template-columns: 1fr; } .hero { padding: 96px 16px 56px; } .hero-shell { padding: 28px 16px; border-radius: 22px; } .hero-title { font-size: clamp(1.95rem, 9vw, 3.1rem); } .hero-sub { font-size: 0.95rem; } .idea-strip { margin: -10px 20px 10px; } .hero-stats { gap: 24px; } .artists-list { grid-template-columns: 1fr; } .lb-nav { width: 40px; height: 40px; font-size: 1.1rem; } .lb-prev { left: 10px; } .lb-next { right: 60px; } }
 @media(max-width:480px) { .masonry { columns: 1; } }
 </style>
 </head>
@@ -577,36 +599,40 @@
       </span>
     </a>
     <ul class="nav-links">
-      <li><a href="/#gallery">Gallery</a></li>
-      <li><a href="/#artists">Artists</a></li>
+      <li><a href="/">Home</a></li>
+      <li><a href="/gallery">Gallery</a></li>
+      <li><a href="/artists">Artists</a></li>
+      <li><a href="/hire">Hire</a></li>
+      <li><a href="/contact">Contact</a></li>
     </ul>
     <div class="nav-right" id="navRight"></div>
   </nav>
 
   <!-- Hero -->
+  <!--SSR_PERSONAL_HERO-->
   <section class="hero">
     <div class="hero-shell">
-      <p class="hero-eyebrow">SDU University - Student Works</p>
-      <h1 class="hero-title">Not Just a Gallery.<br>It is a <em>Creative Pulse</em>.</h1>
-      <p class="hero-sub">Discover bold student projects across digital art, photography, 3D, video and interactive media.</p>
-      <div class="hero-ribbon">Curated by students, powered by imagination</div>
+      <p class="hero-eyebrow" data-i18n="hero_eyebrow">SDU University - Student Works</p>
+      <h1 class="hero-title" data-i18n="hero_title_full">Not Just a Gallery. It is a Creative Pulse.</h1>
+      <p class="hero-sub" data-i18n="hero_desc">Discover bold projects</p>
+      <div class="hero-ribbon" data-i18n="hero_ribbon">Curated by students, powered by imagination</div>
       <div class="hero-chips">
-        <span class="hero-chip">Digital Art</span>
-        <span class="hero-chip">3D Motion</span>
-        <span class="hero-chip">Photography</span>
-        <span class="hero-chip">Interactive</span>
+        <span class="hero-chip" data-i18n="cat_digital_art">Digital Art</span>
+        <span class="hero-chip" data-i18n="cat_3d_motion">3D Motion</span>
+        <span class="hero-chip" data-i18n="cat_photography">Photography</span>
+        <span class="hero-chip" data-i18n="cat_interactive">Interactive</span>
       </div>
       <div class="hero-btns">
-        <button class="btn-gallery" onclick="location.href='/gallery'">Explore More</button>
+        <button class="btn-gallery" onclick="location.href='/gallery'" data-i18n="btn_explore">Explore More</button>
       </div>
     </div>
     <div class="upload-btn-hero" id="uploadBtnHero">
-      <a href="/dashboard?tab=submit" class="btn btn-ghost btn-lg">Upload Your Work</a>
+      <a href="/dashboard?tab=submit" class="btn btn-ghost btn-lg" data-i18n="uploadYourWorkHeader">Upload Your Work</a>
     </div>
     <div class="hero-stats" id="heroStats">
-      <div class="stat"><div class="stat-num" id="statWorks">--</div><div class="stat-label">Projects</div></div>
-      <div class="stat"><div class="stat-num" id="statArtists">--</div><div class="stat-label">Students</div></div>
-      <div class="stat"><div class="stat-num">6</div><div class="stat-label">Categories</div></div>
+      <div class="stat"><div class="stat-num" id="statWorks">--</div><div class="stat-label" data-i18n="stat_projects">Projects</div></div>
+      <div class="stat"><div class="stat-num" id="statArtists">--</div><div class="stat-label" data-i18n="stat_students">Students</div></div>
+      <div class="stat"><div class="stat-num">6</div><div class="stat-label" data-i18n="stat_categories">Categories</div></div>
     </div>
   </section>
 
@@ -631,10 +657,10 @@
   <section class="section" id="gallery">
     <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:40px;">
       <div>
-        <div class="section-eyebrow">Student Portfolio</div>
-        <h2 class="section-title">The <em>Gallery</em></h2>
+        <div class="section-eyebrow" data-i18n="student_portfolio">Student Portfolio</div>
+        <h2 class="section-title"><span data-i18n="gallery">Gallery</span></h2>
       </div>
-      <a href="/gallery" class="btn btn-ghost btn-sm">View All</a>
+      <a href="/gallery" class="btn btn-ghost btn-sm" data-i18n="view_all">View All</a>
     </div>
     <div class="filters" id="galleryFilters"></div>
     <div class="masonry" id="masonryGrid" style="margin-top:24px"></div>
@@ -644,10 +670,10 @@
   <section class="section" id="artists">
     <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:40px;">
       <div>
-        <div class="section-eyebrow">Creative Minds</div>
-        <h2 class="section-title">Student <em>Spotlight</em></h2>
+        <div class="section-eyebrow" data-i18n="creative_minds">Creative Minds</div>
+        <h2 class="section-title" data-i18n="student_spotlight">Student Spotlight</h2>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="openArtistsModal()">View More Artists</button>
+      <button class="btn btn-ghost btn-sm" onclick="openArtistsModal()" data-i18n="view_more_artists">View More Artists</button>
     </div>
     <div class="artists-row" id="artistsRow"></div>
   </section>
@@ -655,13 +681,13 @@
   <div class="artists-modal" id="artistsModal" aria-hidden="true">
     <div class="artists-modal-card">
       <div class="artists-modal-head">
-        <div class="artists-modal-title">Discover Artists</div>
-        <button class="btn btn-ghost btn-sm" onclick="closeArtistsModal()">Close</button>
+        <div class="artists-modal-title" data-i18n="discover_artists">Discover Artists</div>
+        <button class="btn btn-ghost btn-sm" onclick="closeArtistsModal()" data-i18n="close">Close</button>
       </div>
       <div class="artists-toolbar">
-        <input id="artistsSearch" class="artists-search" type="text" placeholder="Search by name, major, year" oninput="filterArtistsModal()">
+        <input id="artistsSearch" class="artists-search" type="text" placeholder="Search by name" data-i18n-placeholder="search_by_name" oninput="filterArtistsModal()">
         <select id="artistsMajor" class="artists-major" onchange="filterArtistsModal()">
-          <option value="all">All Majors</option>
+          <option value="all" data-i18n="all_majors">All Majors</option>
         </select>
       </div>
       <div id="artistsModalList" class="artists-list"></div>
@@ -670,12 +696,12 @@
 
   <!-- CTA -->
   <section class="cta-band">
-    <div class="section-eyebrow" style="margin-bottom:14px;">Join the Gallery</div>
-    <h2>Share Your <em style="color:var(--accent-primary)">Creative Work</em></h2>
-    <p>All SDU students are invited to submit their projects and artworks to the gallery.</p>
+    <div class="section-eyebrow" style="margin-bottom:14px;" data-i18n="join_gallery">Join the Gallery</div>
+    <h2><span style="color:var(--accent-primary)" data-i18n="share_your_creative_work">Share Your Creative Work</span></h2>
+    <p data-i18n="cta_invite_all_students">All SDU students are invited to submit their projects and artworks to the gallery.</p>
     <div class="cta-row">
-      <a href="/auth?mode=register" class="btn btn-primary btn-lg">Submit Your Work</a>
-      <a href="/gallery" class="btn btn-ghost btn-lg">Explore Gallery</a>
+      <a href="/auth?mode=register" class="btn btn-primary btn-lg" data-i18n="btn_submit">Submit Your Work</a>
+      <a href="/gallery" class="btn btn-ghost btn-lg" data-i18n="explore_gallery">Explore Gallery</a>
     </div>
   </section>
 
@@ -683,31 +709,37 @@
   <footer>
     <div class="footer-content">
       <div class="footer-col">
-        <h4>About</h4>
-        <p>MMS Gallery is the official student multimedia exhibition platform for SDU University, showcasing creative digital works from our talented students.</p>
+        <h4 data-i18n="footer_about">About</h4>
+        <p data-i18n="aboutText">MMS Gallery is the official student multimedia exhibition platform for SDU University, showcasing creative digital works from our talented students.</p>
       </div>
       <div class="footer-col">
-        <h4>Contact</h4>
-        <p>Have questions or need assistance?</p>
-        <p style="margin-top:8px"><a href="mailto:info@sdu.edu.kz">Contact Us</a></p>
+        <h4 data-i18n="contact">Contact</h4>
+        <p data-i18n="contactPrompt">Have questions or need assistance?</p>
+        <p style="margin-top:8px"><a href="mailto:info@sdu.edu.kz" data-i18n="contactUs">Contact Us</a></p>
       </div>
       <div class="footer-col">
-        <h4>Address</h4>
+        <h4 data-i18n="address_label">Address</h4>
         <address>SDU University<br>Almaty, Abylai Khan str. 1/1<br>Kaskelen 040900</address>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>2025 MMS Gallery - SDU University</span>
+      <span data-i18n="footerCopy">2025 MMS Gallery - SDU University</span>
     </div>
   </footer>
 </div>
 
 <script src="/js/app.js"></script>
 <script>
-const CATS = ['all','digital','photography','3d','illustration','video','interactive'];
+const CATS = ['all','Digital Art','3D','Animation','Photography','VFX','UX/UI','Game Art','Illustration','Video','Interactive','Other'];
 let currentArtwork = null;
 let currentIndex = -1;
 let allArtistsData = [];
+
+function isVideoArtwork(artwork) {
+  const type = (artwork.file_type || '').toLowerCase();
+  const category = (artwork.category || '').toLowerCase();
+  return type === 'video' || category === 'video';
+}
 
 function scrollTo(sel) { document.querySelector(sel)?.scrollIntoView({behavior:'smooth'}); }
 
@@ -755,21 +787,34 @@ function renderMasonry(arts) {
   const hs = [180, 240, 200, 160, 280, 220, 190, 250, 170, 230];
   grid.innerHTML = '';
   if (!arts.length) {
-    grid.innerHTML = '<p style="color:var(--text-muted);font-style:italic;padding:40px 0">No works found.</p>';
+    grid.innerHTML = '<p style="color:var(--text-muted);font-style: normal;padding:40px 0">No works found.</p>';
     return;
   }
   arts.forEach((a, i) => {
     const item = document.createElement('div');
     item.className = 'reveal m-item';
-    const imgHtml = a.image_url
-      ? `<img src="${a.image_url}" style="width:100%;display:block;max-height:280px;object-fit:cover">`
-      : artSVG(a.id, 300, hs[i % hs.length]);
+    const imgHtml = isVideoArtwork(a) && a.file_url
+      ? `<video src="${a.file_url}" poster="${a.thumbnail_url || a.image_url || ''}" muted loop playsinline preload="metadata" style="width:100%;display:block;max-height:280px;object-fit:cover"></video>`
+      : (a.image_url
+        ? `<img src="${a.image_url}" style="width:100%;display:block;max-height:280px;object-fit:cover">`
+        : artSVG(a.id, 300, hs[i % hs.length]));
     item.innerHTML = `${imgHtml}
       <div class="m-info">
         <div class="m-name">${a.title}</div>
         <div class="m-author">${a.author?.name || ''} - ${a.category}</div>
       </div>`;
     item.addEventListener('click', () => openLb(a, i));
+    item.addEventListener('mouseenter', () => {
+      const media = item.querySelector('video');
+      if (media) media.play().catch(() => {});
+    });
+    item.addEventListener('mouseleave', () => {
+      const media = item.querySelector('video');
+      if (media) {
+        media.pause();
+        media.currentTime = 0;
+      }
+    });
     grid.appendChild(item);
   });
   initReveal();
@@ -779,7 +824,7 @@ function buildFilters() {
   CATS.forEach(c => {
     const btn = document.createElement('button');
     btn.className = 'flt' + (c === 'all' ? ' active' : '');
-    btn.textContent = c === 'all' ? 'All Works' : c.charAt(0).toUpperCase() + c.slice(1);
+    btn.textContent = c === 'all' ? t('allWorks') : t(c);
     btn.onclick = () => {
       container.querySelectorAll('.flt').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -792,11 +837,11 @@ function buildFilters() {
 // Artists
 async function loadArtists() {
   try {
-    const artists = await apiFetch('/api/artists');
+    const artists = await apiFetch('/api/artists/top');
     allArtistsData = artists;
     const row = document.getElementById('artistsRow');
     row.innerHTML = '';
-    artists.slice(0, 4).forEach((a, i) => {
+    artists.slice(0, 3).forEach((a, i) => {
       const card = document.createElement('div');
       card.className = 'reveal artist-card';
       card.innerHTML = `
@@ -805,11 +850,12 @@ async function loadArtists() {
           <circle cx="40" cy="32" r="13" fill="var(--border-color)"/>
           <ellipse cx="40" cy="62" rx="20" ry="14" fill="var(--border-color)"/>
         </svg></div>
+        <div style="font-size:1.2rem;margin-bottom:6px">${['🥇','🥈','🥉'][i] || i + 1}</div>
         <div class="a-name">${a.name}</div>
-        <div class="a-major">${a.major || 'Multimedia Arts'}</div>
-        <div class="a-count"><strong>${a.artwork_count}</strong> works</div>
+        <div class="a-major">${t(a.profession || a.major || 'Multimedia Arts')}</div>
+        <div class="a-count"><strong>${a.works_count || a.artwork_count || 0}</strong> ${t('works')} • <strong>${a.likes_count || 0}</strong> ${t('likes')}</div>
       `;
-      card.onclick = () => location.href = `/artist/${a.uuid}`;
+      card.onclick = () => location.href = `/profile/${a.username}`;
       row.appendChild(card);
     });
     buildArtistsMajorFilter();
@@ -822,14 +868,14 @@ function buildArtistsMajorFilter() {
   const majorSelect = document.getElementById('artistsMajor');
   if (!majorSelect) return;
   const majors = Array.from(new Set(allArtistsData.map(a => (a.major || '').trim()).filter(Boolean))).sort();
-  majorSelect.innerHTML = '<option value="all">All Majors</option>' + majors.map(m => `<option value="${m}">${m}</option>`).join('');
+  majorSelect.innerHTML = `<option value="all">${t('all_majors')}</option>` + majors.map(m => `<option value="${m}">${t(m)}</option>`).join('');
 }
 
 function renderArtistsModal(artists) {
   const list = document.getElementById('artistsModalList');
   if (!list) return;
   if (!artists.length) {
-    list.innerHTML = '<p style="grid-column:1/-1;color:var(--text-muted);font-style:italic;padding:8px 0">No artists found.</p>';
+    list.innerHTML = `<p style="grid-column:1/-1;color:var(--text-muted);font-style: normal;padding:8px 0">${t('no_artists_found')}</p>`;
     return;
   }
   list.innerHTML = artists.map(a => `
@@ -840,9 +886,9 @@ function renderArtistsModal(artists) {
         <ellipse cx="40" cy="62" rx="20" ry="14" fill="var(--border-color)"/>
       </svg></div>
       <div class="a-name">${a.name}</div>
-      <div class="a-major">${a.major || 'Multimedia Arts'}</div>
-      <div class="a-count"><strong>${a.artwork_count || 0}</strong> works</div>
-      <button class="btn btn-primary btn-sm" onclick="location.href='/artist/${a.uuid}'">View Profile</button>
+      <div class="a-major">${t(a.major || 'Multimedia Arts')}</div>
+      <div class="a-count"><strong>${a.artwork_count || 0}</strong> ${t('works')}</div>
+      <button class="btn btn-primary btn-sm" onclick="location.href='/profile/${a.username}'">${t('view_profile')}</button>
     </article>
   `).join('');
 }
@@ -886,16 +932,20 @@ function openLb(a, index) {
   document.getElementById('lbDesc').textContent = a.description || '';
   const authorEl = document.getElementById('lbAuthor');
   authorEl.textContent = a.author?.name || 'Unknown';
-  authorEl.href = a.author?.uuid ? '/artist/' + a.author.uuid : '#';
+  authorEl.href = (a.author?.username || a.author?.uuid) ? '/profile/' + (a.author.username || a.author.uuid) : '#';
   authorEl.style.color = 'var(--accent-primary)';
   authorEl.onmouseover = function() { this.style.textDecoration = 'underline'; };
   authorEl.onmouseout = function() { this.style.textDecoration = 'none'; };
   document.getElementById('lbAuthorSub').textContent = (a.author?.major || '') + ' - ' + (a.author?.year || '');
   document.getElementById('lbLikeCount').textContent = (a.likes || 0) + ' likes';
   const wrap = document.getElementById('lbImgWrap');
-  wrap.innerHTML = a.image_url
-    ? `<img src="${a.image_url}" style="width:100%;height:100%;min-height:400px;object-fit:cover;display:block">`
-    : artSVG(a.id, 500, 500);
+  if (isVideoArtwork(a) && a.file_url) {
+    wrap.innerHTML = `<video src="${a.file_url}" poster="${a.thumbnail_url || a.image_url || ''}" controls autoplay playsinline preload="metadata" style="width:100%;height:100%;min-height:400px;object-fit:cover;background:#000"></video>`;
+  } else {
+    wrap.innerHTML = a.image_url
+      ? `<img src="${a.image_url}" style="width:100%;height:100%;min-height:400px;object-fit:cover;display:block">`
+      : artSVG(a.id, 500, 500);
+  }
   loadComments(a.uuid);
   document.getElementById('commentForm').style.display = isLoggedIn() ? 'flex' : 'none';
   document.getElementById('lb').classList.add('open');
@@ -953,7 +1003,7 @@ async function loadComments(uuid) {
   const box = document.getElementById('commentsBox');
   try {
     const c = await apiFetch(`/api/artworks/${uuid}/comments`);
-    box.innerHTML = c.length ? c.map(x => `<div class="comment-item"><span class="comment-author">${x.name}:</span> ${x.content}</div>`).join('') : '<p style="font-size:0.85rem;color:var(--text-muted);font-style:italic">No comments yet.</p>';
+    box.innerHTML = c.length ? c.map(x => `<div class="comment-item"><span class="comment-author">${x.name}:</span> ${x.content}</div>`).join('') : '<p style="font-size:0.85rem;color:var(--text-muted);font-style: normal">No comments yet.</p>';
   } catch {}
 }
 
