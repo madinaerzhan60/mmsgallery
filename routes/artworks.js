@@ -164,6 +164,22 @@ function mergeArtworkRows(primaryRows, secondaryRows) {
   });
 }
 
+function matchesArtworkFilters(row, { category, search, featured }) {
+  if (!row) return false;
+  if (featured && Number(row.featured || 0) !== 1) return false;
+  if (category && category !== 'all') {
+    const normalizedCategory = String(row.category || '').trim().toLowerCase();
+    if (normalizedCategory !== String(category).trim().toLowerCase()) return false;
+  }
+  if (search) {
+    const query = String(search).trim().toLowerCase();
+    const title = String(row.title || '').toLowerCase();
+    const description = String(row.description || '').toLowerCase();
+    if (!title.includes(query) && !description.includes(query)) return false;
+  }
+  return true;
+}
+
 async function withStatsPg(artwork) {
   const commentsRow = await pgPool.query('SELECT COUNT(*)::int AS c FROM comments WHERE artwork_id=$1', [artwork.id]);
   const authorRow = await pgPool.query(
@@ -212,7 +228,9 @@ router.get('/', async (req, res) => {
       const result = await pgPool.query(query, params);
       const pgRows = await Promise.all(result.rows.map((row) => withStatsPg(row)));
       const sqliteRows = db.prepare(`SELECT a.* FROM artworks a WHERE a.status='approved'`).all();
-      const localRows = sqliteRows.map(withStats);
+      const localRows = sqliteRows
+        .map(withStats)
+        .filter((row) => matchesArtworkFilters(row, { category, search, featured }));
       return res.json(mergeArtworkRows(pgRows, localRows));
     } catch (error) {
       const fallbackRows = db.prepare(query.replace(/\$\d+/g, '?')).all(...params).map(withStats);
