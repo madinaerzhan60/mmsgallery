@@ -60,6 +60,19 @@ function extForFile(file) {
   return '.bin';
 }
 
+function extFromMimeOrName(mimeType = '', fileName = '') {
+  const byName = path.extname(String(fileName || '')).toLowerCase();
+  if (byName) return byName;
+  const type = String(mimeType || '').toLowerCase();
+  if (type.includes('png')) return '.png';
+  if (type.includes('webp')) return '.webp';
+  if (type.includes('gif')) return '.gif';
+  if (type.includes('jpeg') || type.includes('jpg')) return '.jpg';
+  if (type.includes('mp4')) return '.mp4';
+  if (type.includes('quicktime')) return '.mov';
+  return '.bin';
+}
+
 async function uploadToStorage(file, folder) {
   if (!supabase) {
     throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY for cloud uploads.');
@@ -79,6 +92,41 @@ async function uploadToStorage(file, folder) {
   const { data } = supabase.storage.from(storageBucket).getPublicUrl(objectPath);
   return data.publicUrl;
 }
+
+// POST /api/artworks/upload-url (auth)
+router.post('/upload-url', auth, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({
+        error: 'Cloud upload is not configured. Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.'
+      });
+    }
+
+    const kind = String(req.body.kind || '').toLowerCase();
+    const mimeType = String(req.body.mimeType || 'application/octet-stream');
+    const fileName = String(req.body.fileName || 'file.bin');
+    if (kind !== 'image' && kind !== 'video') {
+      return res.status(400).json({ error: 'kind must be image or video' });
+    }
+
+    const folder = kind === 'video' ? 'videos' : 'images';
+    const objectPath = `${folder}/${uuidv4()}${extFromMimeOrName(mimeType, fileName)}`;
+    const { data, error } = await supabase.storage.from(storageBucket).createSignedUploadUrl(objectPath);
+    if (error || !data?.signedUrl) {
+      return res.status(500).json({ error: error?.message || 'Failed to create signed upload URL.' });
+    }
+
+    const { data: publicData } = supabase.storage.from(storageBucket).getPublicUrl(objectPath);
+    return res.json({
+      uploadUrl: data.signedUrl,
+      publicUrl: publicData.publicUrl,
+      objectPath,
+      bucket: storageBucket
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to create upload URL' });
+  }
+});
 
 function withStats(artwork) {
   const likesFromTable = db.prepare('SELECT COUNT(*) as c FROM likes WHERE artwork_id=?').get(artwork.id).c;
@@ -127,10 +175,17 @@ router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'f
     const { title, description, category, tags } = req.body;
     if (!title || !category) return res.status(400).json({ error: 'Title and category required' });
 
+    const directImageUrl = String(req.body.image_url || '').trim() || null;
+    const directFileUrl = String(req.body.file_url || '').trim() || null;
+    const directFileType = String(req.body.file_type || '').trim().toLowerCase();
+
     let image_url = null;
     let file_url = null;
 
-    if (req.files?.image) {
+    if (directImageUrl || directFileUrl) {
+      image_url = directImageUrl;
+      file_url = directFileUrl;
+    } else if (req.files?.image) {
       image_url = isVercel
         ? await uploadToStorage(req.files.image[0], 'images')
         : `/uploads/${req.files.image[0].filename}`;
@@ -142,7 +197,7 @@ router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'f
         : `/uploads/${req.files.file[0].filename}`;
     }
 
-    const fileType = file_url ? 'video' : 'image';
+    const fileType = directFileType || (file_url ? 'video' : 'image');
     const uuid = uuidv4();
 
     db.prepare(`

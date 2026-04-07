@@ -661,6 +661,36 @@ function handleFile2(input) {
   document.getElementById('dropZone2').style.display = 'none';
 }
 
+async function uploadSelectedFileDirect(file) {
+  const kind = file.type.startsWith('video/') ? 'video' : 'image';
+  const signed = await apiFetch('/api/artworks/upload-url', {
+    method: 'POST',
+    body: JSON.stringify({ kind, mimeType: file.type, fileName: file.name })
+  });
+
+  const uploadRes = await fetch(signed.uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type || 'application/octet-stream' },
+    body: file
+  });
+
+  if (!uploadRes.ok) {
+    let message = `Storage upload failed (${uploadRes.status})`;
+    try {
+      const errJson = await uploadRes.json();
+      if (errJson?.error) message = errJson.error;
+    } catch {
+      // keep default message
+    }
+    throw new Error(message);
+  }
+
+  return {
+    kind,
+    publicUrl: signed.publicUrl
+  };
+}
+
 async function submitWork2() {
   const title = document.getElementById('workTitle2').value.trim();
   const category = normalizeCategoryValue(document.getElementById('workCat2').value);
@@ -691,16 +721,21 @@ async function submitWork2() {
   }
 
   try {
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('category', category);
-    formData.append('description', description);
-    formData.append('tags', tags);
-    if (selectedFile2) {
-      if (selectedFile2.type.startsWith('video/')) formData.append('file', selectedFile2);
-      else formData.append('image', selectedFile2);
-    }
-    await apiFetchForm('/api/artworks', formData);
+    const uploaded = await uploadSelectedFileDirect(selectedFile2);
+    const payload = {
+      title,
+      category,
+      description,
+      tags,
+      file_type: uploaded.kind
+    };
+    if (uploaded.kind === 'video') payload.file_url = uploaded.publicUrl;
+    else payload.image_url = uploaded.publicUrl;
+
+    await apiFetch('/api/artworks', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
     toast(t('workSubmittedSuccessfully'), 'success');
     document.getElementById('workTitle2').value = '';
     document.getElementById('workCat2').value = '';
