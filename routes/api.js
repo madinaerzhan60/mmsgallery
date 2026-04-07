@@ -1,8 +1,17 @@
 const router = require('express').Router();
+const { Pool } = require('pg');
 const db = require('../database');
 const { auth, adminOnly } = require('../middleware/auth');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../middleware/auth');
+const supabaseDbUrl = process.env.SUPABASE_DB_URL;
+const usePg = Boolean(supabaseDbUrl);
+const pgPool = usePg
+  ? new Pool({
+      connectionString: supabaseDbUrl,
+      ssl: { rejectUnauthorized: false }
+    })
+  : null;
 
 function getTokenFromRequest(req) {
   const authHeader = req.headers.authorization || '';
@@ -366,6 +375,25 @@ router.get('/admin/stats', adminOnly, (req, res) => {
 });
 
 router.get('/admin/artworks', adminOnly, (req, res) => {
+  if (usePg) {
+    (async () => {
+      const { status } = req.query;
+      const params = [];
+      let idx = 1;
+      let q = `SELECT a.*, u.uuid as author_uuid, u.username as author_username, u.name as author_name, u.email as author_email,
+        (SELECT COUNT(*)::int FROM likes WHERE artwork_id=a.id) as likes
+        FROM artworks a JOIN users u ON a.user_id=u.id`;
+      if (status) {
+        q += ` WHERE a.status=$${idx++}`;
+        params.push(status);
+      }
+      q += ' ORDER BY a.created_at DESC';
+      const rows = await pgPool.query(q, params);
+      return res.json(rows.rows);
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load artworks' }));
+    return;
+  }
+
   const { status } = req.query;
   let q = `SELECT a.*, u.uuid as author_uuid, u.username as author_username, u.name as author_name, u.email as author_email,
     (SELECT COUNT(*) FROM likes WHERE artwork_id=a.id) as likes
@@ -456,6 +484,18 @@ router.get('/admin/students/export.csv', adminOnly, (req, res) => {
 });
 
 router.patch('/admin/artworks/:id/status', adminOnly, (req, res) => {
+  if (usePg) {
+    (async () => {
+      const { status, featured } = req.body;
+      await pgPool.query(
+        'UPDATE artworks SET status=$1, featured=COALESCE($2, featured) WHERE id=$3',
+        [status, featured != null ? Number(featured) : null, Number(req.params.id)]
+      );
+      return res.json({ ok: true });
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to update status' }));
+    return;
+  }
+
   const { status, featured } = req.body;
   db.prepare('UPDATE artworks SET status=?, featured=COALESCE(?,featured) WHERE id=?')
     .run(status, featured != null ? Number(featured) : null, req.params.id);

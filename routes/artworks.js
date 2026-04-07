@@ -4,12 +4,21 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const { createClient } = require('@supabase/supabase-js');
+const { Pool } = require('pg');
 const db = require('../database');
 const { auth, adminOnly } = require('../middleware/auth');
 const isVercel = Boolean(process.env.VERCEL);
+const supabaseDbUrl = process.env.SUPABASE_DB_URL;
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const storageBucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
+const usePg = Boolean(supabaseDbUrl);
+const pgPool = usePg
+  ? new Pool({
+      connectionString: supabaseDbUrl,
+      ssl: { rejectUnauthorized: false }
+    })
+  : null;
 const supabaseEnabled = Boolean(supabaseUrl && supabaseServiceRoleKey);
 const supabase = supabaseEnabled
   ? createClient(supabaseUrl, supabaseServiceRoleKey, {
@@ -142,9 +151,50 @@ function withStats(artwork) {
   };
 }
 
+async function withStatsPg(artwork) {
+  const commentsRow = await pgPool.query('SELECT COUNT(*)::int AS c FROM comments WHERE artwork_id=$1', [artwork.id]);
+  const authorRow = await pgPool.query(
+    'SELECT id, uuid, username, name, COALESCE(profession, major) as major, year, avatar_url FROM users WHERE id=$1 LIMIT 1',
+    [artwork.user_id]
+  );
+  return {
+    ...artwork,
+    likes: Number(artwork.likes_count || 0),
+    comments: Number(commentsRow.rows[0]?.c || 0),
+    author: authorRow.rows[0] || null,
+    tags: artwork.tags ? String(artwork.tags).split(',') : []
+  };
+}
+
 // GET /api/artworks  (public, approved)
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { category, search, featured, page = 1, limit = 20 } = req.query;
+
+  if (usePg) {
+    try {
+      const params = [];
+      let idx = 1;
+      let query = `SELECT a.* FROM artworks a WHERE a.status='approved'`;
+      if (category && category !== 'all') {
+        query += ` AND LOWER(a.category)=LOWER($${idx++})`;
+        params.push(category);
+      }
+      if (featured) query += ' AND a.featured=1';
+      if (search) {
+        query += ` AND (a.title ILIKE $${idx++} OR a.description ILIKE $${idx++})`;
+        params.push(`%${search}%`, `%${search}%`);
+      }
+      query += ` ORDER BY a.created_at DESC LIMIT $${idx++} OFFSET $${idx++}`;
+      params.push(Number(limit), (Number(page) - 1) * Number(limit));
+
+      const result = await pgPool.query(query, params);
+      const rows = await Promise.all(result.rows.map((row) => withStatsPg(row)));
+      return res.json(rows);
+    } catch (error) {
+      return res.status(500).json({ error: error.message || 'Failed to load artworks' });
+    }
+  }
+
   let query = `SELECT a.* FROM artworks a WHERE a.status='approved'`;
   const params = [];
   if (category && category !== 'all') { query += ` AND LOWER(a.category)=LOWER(?)`; params.push(category); }
@@ -159,6 +209,22 @@ router.get('/', (req, res) => {
 
 // GET /api/artworks/:uuid
 router.get('/:uuid', (req, res) => {
+  if (usePg) {
+    (async () => {
+      try {
+        const found = await pgPool.query('SELECT * FROM artworks WHERE uuid=$1 LIMIT 1', [req.params.uuid]);
+        const a = found.rows[0];
+        if (!a) return res.status(404).json({ error: 'Not found' });
+        await pgPool.query('UPDATE artworks SET views=COALESCE(views,0)+1 WHERE id=$1', [a.id]);
+        const full = await withStatsPg(a);
+        return res.json({ ...full, liked: false });
+      } catch (error) {
+        return res.status(500).json({ error: error.message || 'Failed to load artwork' });
+      }
+    })();
+    return;
+  }
+
   const a = db.prepare('SELECT * FROM artworks WHERE uuid=?').get(req.params.uuid);
   if (!a) return res.status(404).json({ error: 'Not found' });
   db.prepare('UPDATE artworks SET views=views+1 WHERE id=?').run(a.id);
@@ -200,6 +266,27 @@ router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'f
     const fileType = directFileType || (file_url ? 'video' : 'image');
     const uuid = uuidv4();
 
+    if (usePg) {
+      await pgPool.query(
+        `INSERT INTO artworks (uuid, title, description, category, tags, image_url, file_url, thumbnail_url, file_type, status, user_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10)`,
+        [
+          uuid,
+          title,
+          description || '',
+          category,
+          tags || '',
+          image_url,
+          file_url,
+          image_url,
+          fileType,
+          req.user.id
+        ]
+      );
+      const saved = await pgPool.query('SELECT * FROM artworks WHERE uuid=$1 LIMIT 1', [uuid]);
+      return res.status(201).json(await withStatsPg(saved.rows[0]));
+    }
+
     db.prepare(`
       INSERT INTO artworks (uuid, title, description, category, tags, image_url, file_url, thumbnail_url, file_type, status, user_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
@@ -225,7 +312,9 @@ router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'f
 
 // PUT /api/artworks/:uuid  (owner or admin)
 router.put('/:uuid', auth, upload.fields([{ name: 'image', maxCount: 1 }]), async (req, res) => {
-  const a = db.prepare('SELECT * FROM artworks WHERE uuid=?').get(req.params.uuid);
+  const a = usePg
+    ? (await pgPool.query('SELECT * FROM artworks WHERE uuid=$1 LIMIT 1', [req.params.uuid])).rows[0]
+    : db.prepare('SELECT * FROM artworks WHERE uuid=?').get(req.params.uuid);
   if (!a) return res.status(404).json({ error: 'Not found' });
   if (a.user_id !== req.user.id && req.user.role !== 'admin')
     return res.status(403).json({ error: 'Forbidden' });
@@ -237,6 +326,30 @@ router.put('/:uuid', auth, upload.fields([{ name: 'image', maxCount: 1 }]), asyn
       : `/uploads/${req.files.image[0].filename}`)
     : a.image_url;
 
+  if (usePg) {
+    await pgPool.query(
+      `UPDATE artworks
+       SET title=$1, description=$2, category=$3, tags=$4, image_url=$5,
+           thumbnail_url=COALESCE($6, thumbnail_url),
+           status=COALESCE($7, status),
+           featured=COALESCE($8, featured)
+       WHERE uuid=$9`,
+      [
+        title || a.title,
+        description || a.description,
+        category || a.category,
+        tags || a.tags,
+        image_url,
+        image_url,
+        status || null,
+        featured != null ? Number(featured) : null,
+        req.params.uuid
+      ]
+    );
+    const updated = await pgPool.query('SELECT * FROM artworks WHERE uuid=$1 LIMIT 1', [req.params.uuid]);
+    return res.json(await withStatsPg(updated.rows[0]));
+  }
+
   db.prepare(`UPDATE artworks SET title=?,description=?,category=?,tags=?,image_url=?,
     thumbnail_url=COALESCE(?, thumbnail_url), status=COALESCE(?,status), featured=COALESCE(?,featured) WHERE uuid=?`)
     .run(title||a.title, description||a.description, category||a.category, tags||a.tags,
@@ -247,6 +360,18 @@ router.put('/:uuid', auth, upload.fields([{ name: 'image', maxCount: 1 }]), asyn
 
 // DELETE /api/artworks/:uuid
 router.delete('/:uuid', auth, (req, res) => {
+  if (usePg) {
+    (async () => {
+      const a = (await pgPool.query('SELECT * FROM artworks WHERE uuid=$1 LIMIT 1', [req.params.uuid])).rows[0];
+      if (!a) return res.status(404).json({ error: 'Not found' });
+      if (a.user_id !== req.user.id && req.user.role !== 'admin')
+        return res.status(403).json({ error: 'Forbidden' });
+      await pgPool.query('DELETE FROM artworks WHERE uuid=$1', [req.params.uuid]);
+      return res.json({ ok: true });
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to delete artwork' }));
+    return;
+  }
+
   const a = db.prepare('SELECT * FROM artworks WHERE uuid=?').get(req.params.uuid);
   if (!a) return res.status(404).json({ error: 'Not found' });
   if (a.user_id !== req.user.id && req.user.role !== 'admin')
@@ -257,6 +382,35 @@ router.delete('/:uuid', auth, (req, res) => {
 
 // POST /api/artworks/:uuid/like
 router.post('/:uuid/like', auth, (req, res) => {
+  if (usePg) {
+    (async () => {
+      const found = await pgPool.query('SELECT id FROM artworks WHERE uuid=$1 LIMIT 1', [req.params.uuid]);
+      const a = found.rows[0];
+      if (!a) return res.status(404).json({ error: 'Not found' });
+      const existing = await pgPool.query('SELECT id FROM likes WHERE user_id=$1 AND artwork_id=$2 LIMIT 1', [req.user.id, a.id]);
+      if (existing.rows[0]) {
+        await pgPool.query('DELETE FROM likes WHERE user_id=$1 AND artwork_id=$2', [req.user.id, a.id]);
+        const likesRow = await pgPool.query('SELECT COUNT(*)::int as c FROM likes WHERE artwork_id=$1', [a.id]);
+        const likes = Number(likesRow.rows[0]?.c || 0);
+        await pgPool.query('UPDATE artworks SET likes_count=$1 WHERE id=$2', [likes, a.id]);
+        return res.json({ liked: false, likes });
+      }
+      await pgPool.query('INSERT INTO likes (user_id, artwork_id) VALUES ($1,$2)', [req.user.id, a.id]);
+      const likesRow = await pgPool.query('SELECT COUNT(*)::int as c FROM likes WHERE artwork_id=$1', [a.id]);
+      const likes = Number(likesRow.rows[0]?.c || 0);
+      await pgPool.query('UPDATE artworks SET likes_count=$1 WHERE id=$2', [likes, a.id]);
+      const owner = await pgPool.query('SELECT user_id FROM artworks WHERE id=$1', [a.id]);
+      if (owner.rows[0] && owner.rows[0].user_id !== req.user.id) {
+        await pgPool.query(
+          'INSERT INTO notifications (user_id, type, from_user_id, artwork_id) VALUES ($1, $2, $3, $4)',
+          [owner.rows[0].user_id, 'like', req.user.id, a.id]
+        );
+      }
+      return res.json({ liked: true, likes });
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to like artwork' }));
+    return;
+  }
+
   const a = db.prepare('SELECT id FROM artworks WHERE uuid=?').get(req.params.uuid);
   if (!a) return res.status(404).json({ error: 'Not found' });
   const existing = db.prepare('SELECT id FROM likes WHERE user_id=? AND artwork_id=?').get(req.user.id, a.id);
@@ -280,6 +434,24 @@ router.post('/:uuid/like', auth, (req, res) => {
 
 // GET /api/artworks/:uuid/comments
 router.get('/:uuid/comments', (req, res) => {
+  if (usePg) {
+    (async () => {
+      const found = await pgPool.query('SELECT id FROM artworks WHERE uuid=$1 LIMIT 1', [req.params.uuid]);
+      const a = found.rows[0];
+      if (!a) return res.status(404).json({ error: 'Not found' });
+      const comments = await pgPool.query(
+        `SELECT c.*, u.name, u.avatar_url
+         FROM comments c
+         JOIN users u ON c.user_id=u.id
+         WHERE c.artwork_id=$1
+         ORDER BY c.created_at DESC`,
+        [a.id]
+      );
+      return res.json(comments.rows);
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load comments' }));
+    return;
+  }
+
   const a = db.prepare('SELECT id FROM artworks WHERE uuid=?').get(req.params.uuid);
   if (!a) return res.status(404).json({ error: 'Not found' });
   const comments = db.prepare(`SELECT c.*, u.name, u.avatar_url FROM comments c
@@ -289,6 +461,19 @@ router.get('/:uuid/comments', (req, res) => {
 
 // POST /api/artworks/:uuid/comments
 router.post('/:uuid/comments', auth, (req, res) => {
+  if (usePg) {
+    (async () => {
+      const { content } = req.body;
+      if (!content) return res.status(400).json({ error: 'Content required' });
+      const found = await pgPool.query('SELECT id FROM artworks WHERE uuid=$1 LIMIT 1', [req.params.uuid]);
+      const a = found.rows[0];
+      if (!a) return res.status(404).json({ error: 'Not found' });
+      await pgPool.query('INSERT INTO comments (content, user_id, artwork_id) VALUES ($1,$2,$3)', [content, req.user.id, a.id]);
+      return res.status(201).json({ ok: true });
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to post comment' }));
+    return;
+  }
+
   const { content } = req.body;
   if (!content) return res.status(400).json({ error: 'Content required' });
   const a = db.prepare('SELECT id FROM artworks WHERE uuid=?').get(req.params.uuid);
@@ -299,6 +484,15 @@ router.post('/:uuid/comments', auth, (req, res) => {
 
 // GET /api/artworks/user/mine  (auth)
 router.get('/user/mine', auth, (req, res) => {
+  if (usePg) {
+    (async () => {
+      const result = await pgPool.query('SELECT * FROM artworks WHERE user_id=$1 ORDER BY created_at DESC', [req.user.id]);
+      const rows = await Promise.all(result.rows.map((row) => withStatsPg(row)));
+      return res.json(rows);
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load artworks' }));
+    return;
+  }
+
   const rows = db.prepare('SELECT * FROM artworks WHERE user_id=? ORDER BY created_at DESC').all(req.user.id);
   res.json(rows.map(withStats));
 });
