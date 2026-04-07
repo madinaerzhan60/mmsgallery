@@ -251,7 +251,17 @@ router.post('/register', async (req, res) => {
 
     const user = db.prepare('SELECT * FROM users WHERE uuid = ?').get(uuid);
     const verificationToken = issueEmailVerificationToken(user.id);
-    await sendVerificationEmail(user.email, user.name, verificationToken);
+    const sent = await sendVerificationEmail(user.email, user.name, verificationToken);
+    if (!sent) {
+      db.prepare('UPDATE users SET email_verified=1, email_verified_at=CURRENT_TIMESTAMP WHERE id=?').run(user.id);
+      await syncUserToPg(db.prepare('SELECT * FROM users WHERE id=?').get(user.id)).catch(() => {});
+      return res.status(201).json({
+        ok: true,
+        requiresEmailVerification: false,
+        message: 'Registration successful. Email service is unavailable right now, so your account is already confirmed.'
+      });
+    }
+
     await syncUserToPg(user).catch(() => {});
 
     res.status(201).json({
