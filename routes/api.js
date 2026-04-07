@@ -338,6 +338,29 @@ router.get('/profiles/:uuid', (req, res) => {
 });
 
 router.get('/profiles/:uuid/followers-preview', (req, res) => {
+  if (usePg) {
+    (async () => {
+      const target = await pgFindStudentByIdentifier(req.params.uuid);
+      if (!target) return res.status(404).json({ error: 'Profile not found' });
+
+      const followersRes = await pgPool.query(
+        `SELECT u.uuid, u.username, u.name, u.avatar_url
+         FROM follows f
+         JOIN users u ON u.id = f.follower_id
+         WHERE f.following_id=$1
+         ORDER BY f.created_at DESC
+         LIMIT 5`,
+        [target.id]
+      );
+      const totalRes = await pgPool.query(
+        'SELECT COUNT(*)::int as c FROM follows WHERE following_id=$1',
+        [target.id]
+      );
+      return res.json({ total: Number(totalRes.rows[0]?.c || 0), followers: followersRes.rows });
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load followers preview' }));
+    return;
+  }
+
   const target = findStudentByIdentifier(req.params.uuid);
   if (!target) return res.status(404).json({ error: 'Profile not found' });
 
@@ -355,6 +378,24 @@ router.get('/profiles/:uuid/followers-preview', (req, res) => {
 });
 
 router.get('/profiles/:uuid/followers', (req, res) => {
+  if (usePg) {
+    (async () => {
+      const target = await pgFindStudentByIdentifier(req.params.uuid);
+      if (!target) return res.status(404).json({ error: 'Profile not found' });
+
+      const rows = await pgPool.query(
+        `SELECT u.uuid, u.username, u.name, u.avatar_url
+         FROM follows f
+         JOIN users u ON u.id = f.follower_id
+         WHERE f.following_id=$1
+         ORDER BY f.created_at DESC`,
+        [target.id]
+      );
+      return res.json({ total: rows.rows.length, followers: rows.rows });
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load followers' }));
+    return;
+  }
+
   const target = findStudentByIdentifier(req.params.uuid);
   if (!target) return res.status(404).json({ error: 'Profile not found' });
 
@@ -370,6 +411,29 @@ router.get('/profiles/:uuid/followers', (req, res) => {
 });
 
 router.get('/profiles/:uuid/following-preview', (req, res) => {
+  if (usePg) {
+    (async () => {
+      const target = await pgFindStudentByIdentifier(req.params.uuid);
+      if (!target) return res.status(404).json({ error: 'Profile not found' });
+
+      const followingRes = await pgPool.query(
+        `SELECT u.uuid, u.username, u.name, u.avatar_url
+         FROM follows f
+         JOIN users u ON u.id = f.following_id
+         WHERE f.follower_id=$1
+         ORDER BY f.created_at DESC
+         LIMIT 5`,
+        [target.id]
+      );
+      const totalRes = await pgPool.query(
+        'SELECT COUNT(*)::int as c FROM follows WHERE follower_id=$1',
+        [target.id]
+      );
+      return res.json({ total: Number(totalRes.rows[0]?.c || 0), following: followingRes.rows });
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load following preview' }));
+    return;
+  }
+
   const target = findStudentByIdentifier(req.params.uuid);
   if (!target) return res.status(404).json({ error: 'Profile not found' });
 
@@ -387,6 +451,24 @@ router.get('/profiles/:uuid/following-preview', (req, res) => {
 });
 
 router.get('/profiles/:uuid/following', (req, res) => {
+  if (usePg) {
+    (async () => {
+      const target = await pgFindStudentByIdentifier(req.params.uuid);
+      if (!target) return res.status(404).json({ error: 'Profile not found' });
+
+      const rows = await pgPool.query(
+        `SELECT u.uuid, u.username, u.name, u.avatar_url
+         FROM follows f
+         JOIN users u ON u.id = f.following_id
+         WHERE f.follower_id=$1
+         ORDER BY f.created_at DESC`,
+        [target.id]
+      );
+      return res.json({ total: rows.rows.length, following: rows.rows });
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load following' }));
+    return;
+  }
+
   const target = findStudentByIdentifier(req.params.uuid);
   if (!target) return res.status(404).json({ error: 'Profile not found' });
 
