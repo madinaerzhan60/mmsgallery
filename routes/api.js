@@ -27,6 +27,8 @@ function getOptionalViewerId(req) {
 
 function findStudentByIdentifier(identifier) {
   const normalized = String(identifier || '').trim();
+  const underscoreVariant = normalized.replace(/-/g, '_');
+  const dashVariant = normalized.replace(/_/g, '-');
   const numericId = Number(normalized);
   return db.prepare(`
     SELECT id, uuid, username
@@ -34,11 +36,20 @@ function findStudentByIdentifier(identifier) {
     WHERE role='student' AND (
       uuid=?
       OR lower(username)=lower(?)
+      OR lower(username)=lower(?)
+      OR lower(handle)=lower(?)
       OR lower(handle)=lower(?)
       OR id=?
     )
     LIMIT 1
-  `).get(normalized, normalized, normalized, Number.isNaN(numericId) ? null : numericId);
+  `).get(
+    normalized,
+    normalized,
+    underscoreVariant,
+    normalized,
+    dashVariant,
+    Number.isNaN(numericId) ? null : numericId
+  );
 }
 
 function recordProfileView(targetUserId, viewerUserId = null) {

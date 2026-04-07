@@ -245,14 +245,24 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public/admin.
 app.get('/artist/:uuid', (req, res) => res.redirect(`/profile/${encodeURIComponent(req.params.uuid)}`));
 app.get('/profile/:uuid', (req, res) => {
   const slug = String(req.params.uuid || '').trim();
+  const underscoreVariant = slug.replace(/-/g, '_');
+  const dashVariant = slug.replace(/_/g, '-');
   const row = db.prepare(`
     SELECT username, uuid
     FROM users
     WHERE role='student' AND (
-      uuid=? OR lower(username)=lower(?) OR lower(handle)=lower(?)
+      uuid=?
+      OR lower(username)=lower(?)
+      OR lower(username)=lower(?)
+      OR lower(handle)=lower(?)
+      OR lower(handle)=lower(?)
     )
     LIMIT 1
-  `).get(slug, slug, slug);
+  `).get(slug, slug, underscoreVariant, slug, dashVariant);
+
+  if (!row) {
+    return res.redirect(302, '/artists');
+  }
 
   if (row?.username && slug !== row.username) {
     return res.redirect(302, `/profile/${encodeURIComponent(row.username)}`);
