@@ -179,6 +179,15 @@ async function withStatsPg(artwork) {
   };
 }
 
+async function resolvePgUserId(user) {
+  if (!usePg || !pgPool || !user) return null;
+  const byUuid = await pgPool.query('SELECT id FROM users WHERE uuid=$1 LIMIT 1', [user.uuid]);
+  if (byUuid.rows[0]?.id != null) return Number(byUuid.rows[0].id);
+  const byId = await pgPool.query('SELECT id FROM users WHERE id=$1 LIMIT 1', [user.id]);
+  if (byId.rows[0]?.id != null) return Number(byId.rows[0].id);
+  return null;
+}
+
 // GET /api/artworks  (public, approved)
 router.get('/', async (req, res) => {
   const { category, search, featured, page = 1, limit = 20 } = req.query;
@@ -330,45 +339,61 @@ router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'f
     const fileType = directFileType || (file_url ? 'video' : 'image');
     const uuid = uuidv4();
 
-    if (usePg) {
-      await pgPool.query(
-        `INSERT INTO artworks (uuid, title, description, category, tags, image_url, file_url, thumbnail_url, file_type, status, user_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10)`,
-        [
-          uuid,
-          title,
-          description || '',
-          category,
-          tags || '',
-          image_url,
-          file_url,
-          image_url,
-          fileType,
-          req.user.id
-        ]
+    const insertSqliteArtwork = () => {
+      db.prepare(`
+        INSERT INTO artworks (uuid, title, description, category, tags, image_url, file_url, thumbnail_url, file_type, status, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+      `).run(
+        uuid,
+        title,
+        description || '',
+        category,
+        tags || '',
+        image_url,
+        file_url,
+        image_url,
+        fileType,
+        req.user.id
       );
-      const saved = await pgPool.query('SELECT * FROM artworks WHERE uuid=$1 LIMIT 1', [uuid]);
-      return res.status(201).json(await withStatsPg(saved.rows[0]));
+
+      const artwork = db.prepare('SELECT * FROM artworks WHERE uuid=?').get(uuid);
+      return res.status(201).json(withStats(artwork));
+    };
+
+    if (usePg) {
+      const pgUserId = await resolvePgUserId(req.user);
+      if (!pgUserId) {
+        return insertSqliteArtwork();
+      }
+
+      try {
+        await pgPool.query(
+          `INSERT INTO artworks (uuid, title, description, category, tags, image_url, file_url, thumbnail_url, file_type, status, user_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10)`,
+          [
+            uuid,
+            title,
+            description || '',
+            category,
+            tags || '',
+            image_url,
+            file_url,
+            image_url,
+            fileType,
+            pgUserId
+          ]
+        );
+        const saved = await pgPool.query('SELECT * FROM artworks WHERE uuid=$1 LIMIT 1', [uuid]);
+        return res.status(201).json(await withStatsPg(saved.rows[0]));
+      } catch (error) {
+        if (error?.code === '23503') {
+          return insertSqliteArtwork();
+        }
+        throw error;
+      }
     }
 
-    db.prepare(`
-      INSERT INTO artworks (uuid, title, description, category, tags, image_url, file_url, thumbnail_url, file_type, status, user_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-    `).run(
-      uuid,
-      title,
-      description || '',
-      category,
-      tags || '',
-      image_url,
-      file_url,
-      image_url,
-      fileType,
-      req.user.id
-    );
-
-    const artwork = db.prepare('SELECT * FROM artworks WHERE uuid=?').get(uuid);
-    res.status(201).json(withStats(artwork));
+    return insertSqliteArtwork();
   } catch (e) {
     res.status(500).json({ error: e.message || 'Failed to upload artwork' });
   }
