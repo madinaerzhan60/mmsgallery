@@ -206,7 +206,8 @@ router.get('/', async (req, res) => {
       const localRows = sqliteRows.map(withStats);
       return res.json(mergeArtworkRows(pgRows, localRows));
     } catch (error) {
-      return res.status(500).json({ error: error.message || 'Failed to load artworks' });
+      const fallbackRows = db.prepare(query.replace(/\$\d+/g, '?')).all(...params).map(withStats);
+      return res.json(fallbackRows);
     }
   }
 
@@ -243,7 +244,16 @@ router.get('/user/mine', auth, (req, res) => {
          ORDER BY a.created_at DESC`
       ).all(req.user.id, req.user.uuid).map(withStats);
       return res.json(mergeArtworkRows(pgRows, sqliteRows));
-    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load artworks' }));
+    })().catch(() => {
+      const rows = db.prepare(
+        `SELECT a.*
+         FROM artworks a
+         LEFT JOIN users u ON u.id = a.user_id
+         WHERE a.user_id = ? OR u.uuid = ?
+         ORDER BY a.created_at DESC`
+      ).all(req.user.id, req.user.uuid);
+      return res.json(rows.map(withStats));
+    });
     return;
   }
 
