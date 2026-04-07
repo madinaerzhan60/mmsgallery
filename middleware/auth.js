@@ -9,7 +9,9 @@ function auth(req, res, next) {
 
   try {
     const payload = jwt.verify(header.slice(7), JWT_SECRET);
-    const user = db.prepare('SELECT id, uuid, role, name, email_verified FROM users WHERE id=?').get(payload.id);
+    // UUID is the stable identity across data migrations; IDs may drift.
+    const user = db.prepare('SELECT id, uuid, role, name, email_verified FROM users WHERE uuid=?').get(payload.uuid)
+      || db.prepare('SELECT id, uuid, role, name, email_verified FROM users WHERE id=?').get(payload.id);
     if (!user || user.uuid !== payload.uuid) {
       return res.status(401).json({ error: 'Session expired. Please log in again' });
     }
