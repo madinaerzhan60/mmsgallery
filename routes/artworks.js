@@ -151,6 +151,19 @@ function withStats(artwork) {
   };
 }
 
+function mergeArtworkRows(primaryRows, secondaryRows) {
+  const merged = new Map();
+  for (const row of [...secondaryRows, ...primaryRows]) {
+    if (!row?.uuid) continue;
+    merged.set(String(row.uuid), row);
+  }
+  return Array.from(merged.values()).sort((a, b) => {
+    const at = new Date(a.created_at || 0).getTime();
+    const bt = new Date(b.created_at || 0).getTime();
+    return bt - at;
+  });
+}
+
 async function withStatsPg(artwork) {
   const commentsRow = await pgPool.query('SELECT COUNT(*)::int AS c FROM comments WHERE artwork_id=$1', [artwork.id]);
   const authorRow = await pgPool.query(
@@ -188,8 +201,10 @@ router.get('/', async (req, res) => {
       params.push(Number(limit), (Number(page) - 1) * Number(limit));
 
       const result = await pgPool.query(query, params);
-      const rows = await Promise.all(result.rows.map((row) => withStatsPg(row)));
-      return res.json(rows);
+      const pgRows = await Promise.all(result.rows.map((row) => withStatsPg(row)));
+      const sqliteRows = db.prepare(`SELECT a.* FROM artworks a WHERE a.status='approved'`).all();
+      const localRows = sqliteRows.map(withStats);
+      return res.json(mergeArtworkRows(pgRows, localRows));
     } catch (error) {
       return res.status(500).json({ error: error.message || 'Failed to load artworks' });
     }
@@ -212,8 +227,9 @@ router.get('/user/mine', auth, (req, res) => {
   if (usePg) {
     (async () => {
       const result = await pgPool.query('SELECT * FROM artworks WHERE user_id=$1 ORDER BY created_at DESC', [req.user.id]);
-      const rows = await Promise.all(result.rows.map((row) => withStatsPg(row)));
-      return res.json(rows);
+      const pgRows = await Promise.all(result.rows.map((row) => withStatsPg(row)));
+      const sqliteRows = db.prepare('SELECT * FROM artworks WHERE user_id=? ORDER BY created_at DESC').all(req.user.id).map(withStats);
+      return res.json(mergeArtworkRows(pgRows, sqliteRows));
     })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load artworks' }));
     return;
   }
@@ -228,11 +244,15 @@ router.get('/:uuid', (req, res) => {
     (async () => {
       try {
         const found = await pgPool.query('SELECT * FROM artworks WHERE uuid=$1 LIMIT 1', [req.params.uuid]);
-        const a = found.rows[0];
+        const a = found.rows[0] || db.prepare('SELECT * FROM artworks WHERE uuid=?').get(req.params.uuid);
         if (!a) return res.status(404).json({ error: 'Not found' });
-        await pgPool.query('UPDATE artworks SET views=COALESCE(views,0)+1 WHERE id=$1', [a.id]);
-        const full = await withStatsPg(a);
-        return res.json({ ...full, liked: false });
+        if (found.rows[0]) {
+          await pgPool.query('UPDATE artworks SET views=COALESCE(views,0)+1 WHERE id=$1', [a.id]);
+          const full = await withStatsPg(a);
+          return res.json({ ...full, liked: false });
+        }
+        db.prepare('UPDATE artworks SET views=views+1 WHERE id=?').run(a.id);
+        return res.json({ ...withStats(a), liked: false });
       } catch (error) {
         return res.status(500).json({ error: error.message || 'Failed to load artwork' });
       }

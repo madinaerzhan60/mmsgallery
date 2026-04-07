@@ -491,6 +491,10 @@ router.patch('/admin/artworks/:id/status', adminOnly, (req, res) => {
         'UPDATE artworks SET status=$1, featured=COALESCE($2, featured) WHERE id=$3',
         [status, featured != null ? Number(featured) : null, Number(req.params.id)]
       );
+      try {
+        db.prepare('UPDATE artworks SET status=?, featured=COALESCE(?,featured) WHERE id=?')
+          .run(status, featured != null ? Number(featured) : null, req.params.id);
+      } catch {}
       return res.json({ ok: true });
     })().catch((error) => res.status(500).json({ error: error.message || 'Failed to update status' }));
     return;
