@@ -148,31 +148,111 @@ async function sendPasswordResetEmail(email, name, token) {
 }
 
 async function syncUserToPg(user) {
-  if (!usePg || !pgPool || !user) return;
-  const exists = await pgPool.query('SELECT id FROM users WHERE uuid=$1 LIMIT 1', [user.uuid]);
-  if (exists.rows[0]) return;
-  await pgPool.query(
-    `INSERT INTO users (uuid, name, email, password, role, major, profession, year, bio, language_pref, username, handle, last_username_change, email_verified, email_verified_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-     ON CONFLICT (email) DO NOTHING`,
-    [
-      user.uuid,
-      user.name,
-      user.email,
-      user.password,
-      user.role || 'student',
-      user.major || user.profession || '',
-      user.profession || user.major || 'Other',
-      user.year || '',
-      user.bio || '',
-      user.language_pref || 'en',
-      user.username || null,
-      user.handle || user.username || null,
-      user.last_username_change || null,
-      Number(!!user.email_verified),
-      user.email_verified_at || null
-    ]
-  );
+  if (!usePg || !pgPool || !user) return true;
+
+  const email = String(user.email || '').trim();
+  const username = String(user.username || '').trim();
+  const handle = String(user.handle || username || '').trim();
+
+  try {
+    const conflict = await pgPool.query(
+      `SELECT id, uuid
+       FROM users
+       WHERE uuid=$1
+          OR lower(email)=lower($2)
+          OR lower(username)=lower($3)
+          OR lower(handle)=lower($4)
+       LIMIT 1`,
+      [user.uuid, email, username, handle]
+    );
+
+    if (conflict.rows[0] && conflict.rows[0].uuid !== user.uuid) {
+      console.warn(
+        `[supabase-sync] Skipping user sync for ${email || username || user.uuid} because Supabase already has a different record for the same identity.`
+      );
+      return false;
+    }
+
+    if (conflict.rows[0]) {
+      await pgPool.query(
+        `UPDATE users
+         SET name=$2,
+             email=$3,
+             password=$4,
+             role=$5,
+             major=$6,
+             profession=$7,
+             year=$8,
+             bio=$9,
+             language_pref=$10,
+             username=$11,
+             handle=$12,
+             last_username_change=$13,
+             email_verified=$14,
+             email_verified_at=$15
+         WHERE uuid=$1`,
+        [
+          user.uuid,
+          user.name,
+          email,
+          user.password,
+          user.role || 'student',
+          user.major || user.profession || '',
+          user.profession || user.major || 'Other',
+          user.year || '',
+          user.bio || '',
+          user.language_pref || 'en',
+          username || null,
+          handle || null,
+          user.last_username_change || null,
+          Number(!!user.email_verified),
+          user.email_verified_at || null
+        ]
+      );
+      return true;
+    }
+
+    await pgPool.query(
+      `INSERT INTO users (uuid, name, email, password, role, major, profession, year, bio, language_pref, username, handle, last_username_change, email_verified, email_verified_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+       ON CONFLICT (uuid) DO UPDATE SET
+         name=EXCLUDED.name,
+         email=EXCLUDED.email,
+         password=EXCLUDED.password,
+         role=EXCLUDED.role,
+         major=EXCLUDED.major,
+         profession=EXCLUDED.profession,
+         year=EXCLUDED.year,
+         bio=EXCLUDED.bio,
+         language_pref=EXCLUDED.language_pref,
+         username=EXCLUDED.username,
+         handle=EXCLUDED.handle,
+         last_username_change=EXCLUDED.last_username_change,
+         email_verified=EXCLUDED.email_verified,
+         email_verified_at=EXCLUDED.email_verified_at`,
+      [
+        user.uuid,
+        user.name,
+        email,
+        user.password,
+        user.role || 'student',
+        user.major || user.profession || '',
+        user.profession || user.major || 'Other',
+        user.year || '',
+        user.bio || '',
+        user.language_pref || 'en',
+        username || null,
+        handle || null,
+        user.last_username_change || null,
+        Number(!!user.email_verified),
+        user.email_verified_at || null
+      ]
+    );
+    return true;
+  } catch (error) {
+    console.warn('[supabase-sync] Failed to sync user:', error.message);
+    return false;
+  }
 }
 
 function createLocalUserFromPg(pgUser) {
@@ -218,6 +298,25 @@ router.post('/register', async (req, res) => {
   const usernameExists = db.prepare('SELECT id FROM users WHERE lower(username)=lower(?)').get(cleanUsername);
   if (usernameExists) return res.status(409).json({ error: 'Username is already taken' });
 
+  if (usePg && pgPool) {
+    try {
+      const pgConflict = await pgPool.query(
+        `SELECT id
+         FROM users
+         WHERE lower(email)=lower($1)
+            OR lower(username)=lower($2)
+            OR lower(handle)=lower($2)
+         LIMIT 1`,
+        [email, cleanUsername]
+      );
+      if (pgConflict.rows[0]) {
+        return res.status(409).json({ error: 'Email or username already exists in Supabase' });
+      }
+    } catch (error) {
+      console.warn('[supabase-sync] Registration conflict check failed:', error.message);
+    }
+  }
+
   const hash = bcrypt.hashSync(password, 10);
   const uuid = uuidv4();
   try {
@@ -241,7 +340,7 @@ router.post('/register', async (req, res) => {
     if (!EMAIL_VERIFICATION_REQUIRED) {
       db.prepare('UPDATE users SET email_verified=1, email_verified_at=CURRENT_TIMESTAMP WHERE uuid=?').run(uuid);
       const created = db.prepare('SELECT * FROM users WHERE uuid = ?').get(uuid);
-      await syncUserToPg(created).catch(() => {});
+      await syncUserToPg(created);
       return res.status(201).json({
         ok: true,
         requiresEmailVerification: false,
@@ -254,7 +353,7 @@ router.post('/register', async (req, res) => {
     const sent = await sendVerificationEmail(user.email, user.name, verificationToken);
     if (!sent) {
       db.prepare('UPDATE users SET email_verified=1, email_verified_at=CURRENT_TIMESTAMP WHERE id=?').run(user.id);
-      await syncUserToPg(db.prepare('SELECT * FROM users WHERE id=?').get(user.id)).catch(() => {});
+      await syncUserToPg(db.prepare('SELECT * FROM users WHERE id=?').get(user.id));
       return res.status(201).json({
         ok: true,
         requiresEmailVerification: false,
@@ -262,7 +361,7 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    await syncUserToPg(user).catch(() => {});
+    await syncUserToPg(user);
 
     res.status(201).json({
       ok: true,
