@@ -7,10 +7,17 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../database');
 const { auth } = require('../middleware/auth');
 
+const isVercel = Boolean(process.env.VERCEL);
 const avatarDir = path.join(__dirname, '../public/uploads/avatars');
 const coverDir = path.join(__dirname, '../public/uploads/covers');
-if (!fs.existsSync(avatarDir)) fs.mkdirSync(avatarDir, { recursive: true });
-if (!fs.existsSync(coverDir)) fs.mkdirSync(coverDir, { recursive: true });
+if (!isVercel) {
+  try {
+    if (!fs.existsSync(avatarDir)) fs.mkdirSync(avatarDir, { recursive: true });
+    if (!fs.existsSync(coverDir)) fs.mkdirSync(coverDir, { recursive: true });
+  } catch (error) {
+    console.warn('[user-upload] Failed to prepare upload directories:', error.message);
+  }
+}
 
 function imageFileFilter(req, file, cb) {
   if (!/^image\/(jpeg|jpg|png|webp)$/i.test(file.mimetype)) {
@@ -21,19 +28,23 @@ function imageFileFilter(req, file, cb) {
 }
 
 const avatarUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, avatarDir),
-    filename: (req, file, cb) => cb(null, `${uuidv4()}${path.extname(file.originalname) || '.png'}`)
-  }),
+  storage: isVercel
+    ? multer.memoryStorage()
+    : multer.diskStorage({
+        destination: (req, file, cb) => cb(null, avatarDir),
+        filename: (req, file, cb) => cb(null, `${uuidv4()}${path.extname(file.originalname) || '.png'}`)
+      }),
   limits: { fileSize: 3 * 1024 * 1024 },
   fileFilter: imageFileFilter
 });
 
 const coverUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, coverDir),
-    filename: (req, file, cb) => cb(null, `${uuidv4()}${path.extname(file.originalname) || '.jpg'}`)
-  }),
+  storage: isVercel
+    ? multer.memoryStorage()
+    : multer.diskStorage({
+        destination: (req, file, cb) => cb(null, coverDir),
+        filename: (req, file, cb) => cb(null, `${uuidv4()}${path.extname(file.originalname) || '.jpg'}`)
+      }),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: imageFileFilter
 });
@@ -140,6 +151,11 @@ router.patch('/profile', auth, (req, res) => {
 
 router.patch('/avatar', auth, avatarUpload.single('avatar'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Avatar file is required' });
+  if (isVercel) {
+    return res.status(501).json({
+      error: 'Avatar upload to local filesystem is disabled on Vercel. Use Supabase Storage for uploads.'
+    });
+  }
   const avatarUrl = `/uploads/avatars/${req.file.filename}`;
   db.prepare('UPDATE users SET avatar_url=? WHERE id=?').run(avatarUrl, req.user.id);
   const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.user.id);
@@ -147,6 +163,12 @@ router.patch('/avatar', auth, avatarUpload.single('avatar'), (req, res) => {
 });
 
 router.patch('/cover', auth, coverUpload.single('cover'), (req, res) => {
+  if (isVercel && req.file) {
+    return res.status(501).json({
+      error: 'Cover upload to local filesystem is disabled on Vercel. Use Supabase Storage for uploads.'
+    });
+  }
+
   if (req.file) {
     const coverUrl = `/uploads/covers/${req.file.filename}`;
     db.prepare('UPDATE users SET cover_url=?, cover_gradient=? WHERE id=?').run(coverUrl, null, req.user.id);
