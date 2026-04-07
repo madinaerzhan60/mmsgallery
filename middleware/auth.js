@@ -11,9 +11,44 @@ const pgPool = usePg
     })
   : null;
 
+function getLocalUserByPayload(payload) {
+  const candidates = [
+    payload.uuid ? db.prepare('SELECT id, uuid, username, handle, role, name, email_verified FROM users WHERE uuid=? LIMIT 1').get(payload.uuid) : null,
+    payload.id != null ? db.prepare('SELECT id, uuid, username, handle, role, name, email_verified FROM users WHERE id=? LIMIT 1').get(payload.id) : null,
+    payload.username ? db.prepare('SELECT id, uuid, username, handle, role, name, email_verified FROM users WHERE lower(username)=lower(?) LIMIT 1').get(payload.username) : null,
+    payload.username ? db.prepare('SELECT id, uuid, username, handle, role, name, email_verified FROM users WHERE lower(handle)=lower(?) LIMIT 1').get(payload.username) : null,
+    payload.handle ? db.prepare('SELECT id, uuid, username, handle, role, name, email_verified FROM users WHERE lower(handle)=lower(?) LIMIT 1').get(payload.handle) : null
+  ];
+  return candidates.find(Boolean) || null;
+}
+
+async function getPgUserByPayload(payload) {
+  if (!usePg || !pgPool) return null;
+
+  const queries = [];
+  if (payload.uuid) queries.push(['SELECT * FROM users WHERE uuid=$1 LIMIT 1', [payload.uuid]]);
+  if (payload.id != null) queries.push(['SELECT * FROM users WHERE id=$1 LIMIT 1', [payload.id]]);
+  if (payload.username) {
+    queries.push(['SELECT * FROM users WHERE lower(username)=lower($1) LIMIT 1', [payload.username]]);
+    queries.push(['SELECT * FROM users WHERE lower(handle)=lower($1) LIMIT 1', [payload.username]]);
+  }
+  if (payload.handle) queries.push(['SELECT * FROM users WHERE lower(handle)=lower($1) LIMIT 1', [payload.handle]]);
+
+  for (const [query, values] of queries) {
+    try {
+      const result = await pgPool.query(query, values);
+      if (result.rows[0]) return result.rows[0];
+    } catch {
+      // Try the next identity hint.
+    }
+  }
+
+  return null;
+}
+
 function backfillLocalUser(pgUser) {
   if (!pgUser) return null;
-  const existing = db.prepare('SELECT id, uuid, role, name, email_verified FROM users WHERE uuid=? LIMIT 1').get(pgUser.uuid);
+  const existing = db.prepare('SELECT id, uuid, username, handle, role, name, email_verified FROM users WHERE uuid=? LIMIT 1').get(pgUser.uuid);
   if (existing) return existing;
 
   db.prepare(`
@@ -53,7 +88,26 @@ function backfillLocalUser(pgUser) {
     pgUser.language_pref || 'en'
   );
 
-  return db.prepare('SELECT id, uuid, role, name, email_verified FROM users WHERE uuid=? LIMIT 1').get(pgUser.uuid);
+  return db.prepare('SELECT id, uuid, username, handle, role, name, email_verified FROM users WHERE uuid=? LIMIT 1').get(pgUser.uuid);
+}
+
+function matchesTokenIdentity(user, payload) {
+  if (!user) return false;
+  if (payload.uuid) return user.uuid === payload.uuid;
+  if (payload.username) {
+    const username = normalizeIdentity(payload.username);
+    return normalizeIdentity(user.username) === username || normalizeIdentity(user.handle) === username;
+  }
+  if (payload.handle) {
+    const handle = normalizeIdentity(payload.handle);
+    return normalizeIdentity(user.handle) === handle || normalizeIdentity(user.username) === handle;
+  }
+  if (payload.id != null) return Number(user.id) === Number(payload.id);
+  return true;
+}
+
+function normalizeIdentity(value = '') {
+  return String(value).trim().toLowerCase();
 }
 
 async function auth(req, res, next) {
@@ -64,13 +118,11 @@ async function auth(req, res, next) {
   try {
     const payload = jwt.verify(header.slice(7), JWT_SECRET);
     // UUID is the stable identity across data migrations; IDs may drift.
-    let user = db.prepare('SELECT id, uuid, role, name, email_verified FROM users WHERE uuid=?').get(payload.uuid)
-      || db.prepare('SELECT id, uuid, role, name, email_verified FROM users WHERE id=?').get(payload.id);
+    let user = getLocalUserByPayload(payload);
 
-    if (!user && usePg && pgPool) {
+    if (!user) {
       try {
-        const pgUser = (await pgPool.query('SELECT * FROM users WHERE uuid=$1 LIMIT 1', [payload.uuid])).rows[0]
-          || (await pgPool.query('SELECT * FROM users WHERE id=$1 LIMIT 1', [payload.id])).rows[0];
+        const pgUser = await getPgUserByPayload(payload);
         if (pgUser) {
           user = backfillLocalUser(pgUser);
         }
@@ -79,7 +131,7 @@ async function auth(req, res, next) {
       }
     }
 
-    if (!user || user.uuid !== payload.uuid) {
+    if (!matchesTokenIdentity(user, payload)) {
       return res.status(401).json({ error: 'Session expired. Please log in again' });
     }
     if (user.role !== 'admin' && !Number(user.email_verified)) {
