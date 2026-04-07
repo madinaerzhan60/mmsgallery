@@ -37,6 +37,7 @@ const avatarUpload = multer({
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,24}$/;
 const EMAIL_VERIFY_TTL_HOURS = 24;
+const EMAIL_VERIFICATION_REQUIRED = String(process.env.EMAIL_VERIFICATION_REQUIRED || '').trim().toLowerCase() === 'true';
 
 function normalizeUsername(input = '') {
   return String(input).trim().toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
@@ -104,6 +105,15 @@ router.post('/register', (req, res) => {
       cleanUsername
     );
 
+    if (!EMAIL_VERIFICATION_REQUIRED) {
+      db.prepare('UPDATE users SET email_verified=1, email_verified_at=CURRENT_TIMESTAMP WHERE uuid=?').run(uuid);
+      return res.status(201).json({
+        ok: true,
+        requiresEmailVerification: false,
+        message: 'Registration successful. You can log in now.'
+      });
+    }
+
     const user = db.prepare('SELECT * FROM users WHERE uuid = ?').get(uuid);
     const verificationToken = issueEmailVerificationToken(user.id);
     sendVerificationEmail(user.email, user.name, verificationToken);
@@ -134,7 +144,7 @@ router.post('/login', (req, res) => {
   if (!user || !bcrypt.compareSync(password, user.password))
     return res.status(401).json({ error: 'Invalid credentials' });
 
-  if (!Number(user.email_verified)) {
+  if (EMAIL_VERIFICATION_REQUIRED && !Number(user.email_verified)) {
     return res.status(403).json({
       error: 'Please verify your email before logging in',
       requiresEmailVerification: true
@@ -174,6 +184,10 @@ router.get('/verify-email', (req, res) => {
 
 // POST /api/auth/resend-verification
 router.post('/resend-verification', (req, res) => {
+  if (!EMAIL_VERIFICATION_REQUIRED) {
+    return res.status(400).json({ error: 'Email verification is disabled for this environment' });
+  }
+
   const identifier = String(req.body.email || req.body.login || '').trim();
   if (!identifier) return res.status(400).json({ error: 'Email is required' });
 
