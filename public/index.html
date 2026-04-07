@@ -785,9 +785,12 @@ function animateNum(id, target) {
 
 // Gallery
 let allArts = [];
+const HOME_PREVIEW_LIMIT = 16;
 async function loadGallery(cat = 'all') {
   try {
-    const url = cat === 'all' ? '/api/artworks?limit=20' : `/api/artworks?category=${cat}&limit=20`;
+    const url = cat === 'all'
+      ? `/api/artworks?limit=${HOME_PREVIEW_LIMIT}`
+      : `/api/artworks?category=${cat}&limit=${HOME_PREVIEW_LIMIT}`;
     allArts = await apiFetch(url);
     renderMasonry(allArts);
   } catch(e) { console.error(e); }
