@@ -858,10 +858,8 @@ function coverBackgroundForArtist(artist) {
       : `/${rawCover}`;
     return `center / cover no-repeat url('${safeUrl}')`;
   }
-
   const preset = String(artist?.cover_gradient || '').trim();
-  if (preset) return coverPresets[preset] || preset;
-  return fallback;
+  return coverPresets[preset] || preset || fallback;
 }
 
 function escapeHtml(value = '') {

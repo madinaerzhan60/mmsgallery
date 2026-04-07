@@ -138,6 +138,8 @@ router.get('/artists', (req, res) => {
       u.year,
       u.bio,
       u.avatar_url,
+      u.cover_url,
+      u.cover_gradient,
       (SELECT COUNT(*) FROM artworks WHERE user_id=u.id AND status='approved') AS artwork_count
     FROM users u
     WHERE u.role='student'
@@ -165,6 +167,8 @@ router.get('/artists/:uuid', (req, res) => {
       year,
       bio,
       avatar_url,
+      cover_url,
+      cover_gradient,
       linkedin_url,
       portfolio_url,
       is_open_to_work,
@@ -201,6 +205,8 @@ router.get('/profiles', (req, res) => {
           u.year,
           u.bio,
           u.avatar_url,
+          u.cover_url,
+          u.cover_gradient,
           u.profession,
           u.linkedin_url,
           u.portfolio_url,
@@ -269,6 +275,8 @@ router.get('/profiles/:uuid', (req, res) => {
            u.year,
            u.bio,
            u.avatar_url,
+           u.cover_url,
+           u.cover_gradient,
            u.profession,
            u.linkedin_url,
            u.portfolio_url,
