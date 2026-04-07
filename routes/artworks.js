@@ -5,21 +5,30 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../database');
 const { auth, adminOnly } = require('../middleware/auth');
+const isVercel = Boolean(process.env.VERCEL);
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, '../public/uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+if (!isVercel) {
+  try {
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+  } catch (error) {
+    console.warn('[artwork-upload] Failed to prepare uploads directory:', error.message);
+  }
 }
 
 // Multer config
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, uuidv4() + ext);
-  }
-});
+const storage = isVercel
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: (req, file, cb) => cb(null, uploadsDir),
+      filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        cb(null, uuidv4() + ext);
+      }
+    });
 const upload = multer({
   storage,
   limits: { fileSize: 100 * 1024 * 1024 },
@@ -73,6 +82,12 @@ router.get('/:uuid', (req, res) => {
 // POST /api/artworks  (auth)
 router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'file', maxCount: 1 }]), (req, res) => {
   try {
+    if (isVercel && (req.files?.image || req.files?.file)) {
+      return res.status(501).json({
+        error: 'Local file uploads are disabled on Vercel. Use Supabase Storage for media uploads.'
+      });
+    }
+
     const { title, description, category, tags } = req.body;
     if (!title || !category) return res.status(400).json({ error: 'Title and category required' });
 

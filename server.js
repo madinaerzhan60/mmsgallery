@@ -10,10 +10,17 @@ const { JWT_SECRET } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const isVercel = Boolean(process.env.VERCEL);
 
 // Ensure uploads dir exists
 const uploadsDir = path.join(__dirname, 'public/uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+if (!isVercel) {
+  try {
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+  } catch (error) {
+    console.warn('[uploads] Failed to prepare uploads directory:', error.message);
+  }
+}
 
 // ── Middleware ─────────────────────────────────────────────────
 app.use(cors());
