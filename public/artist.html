@@ -842,6 +842,21 @@ function avatarFallback(name = 'U') {
   return `https://placehold.co/240x240/2563eb/ffffff?text=${encodeURIComponent(name.charAt(0).toUpperCase())}`;
 }
 
+function coverBackgroundForArtist(artist) {
+  const fallback = 'linear-gradient(135deg, #1e3a5f, #2563EB, #0ea5e9)';
+  const rawCover = String(artist?.cover_url || '').trim();
+  if (rawCover) {
+    const safeUrl = /^(https?:|data:|blob:)/i.test(rawCover) || rawCover.startsWith('/')
+      ? rawCover
+      : `/${rawCover}`;
+    return `center / cover no-repeat url('${safeUrl}')`;
+  }
+
+  const preset = String(artist?.cover_gradient || '').trim();
+  if (preset) return preset;
+  return fallback;
+}
+
 function escapeHtml(value = '') {
   return String(value)
     .replace(/&/g, '&amp;')
@@ -1217,7 +1232,7 @@ async function load() {
     const skillTags = skillsByProfession(artist.profession || artist.major || 'Other');
     document.getElementById('content').innerHTML = `
       <div class="profile-shell">
-        <div class="profile-cover"></div>
+        <div class="profile-cover" style="background:${coverBackgroundForArtist(artist)}"></div>
 
         <section class="profile-head">
           <div class="profile-top-row">
