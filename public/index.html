@@ -881,51 +881,9 @@ function buildArtistsMajorFilter() {
   majorSelect.innerHTML = `<option value="all">${t('all_majors')}</option>` + majors.map(m => `<option value="${m}">${t(m)}</option>`).join('');
 }
 
-function renderArtistsModal(artists) {
-  const list = document.getElementById('artistsModalList');
-  if (!list) return;
-  if (!artists.length) {
-    list.innerHTML = `<p style="grid-column:1/-1;color:var(--text-muted);font-style: normal;padding:8px 0">${t('no_artists_found')}</p>`;
-    return;
-  }
-  list.innerHTML = artists.map(a => `
-    <article class="artist-mini">
-      <div class="a-ring"><svg viewBox="0 0 80 80" class="a-img" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="40" cy="40" r="40" fill="var(--bg-tertiary)"/>
-        <circle cx="40" cy="32" r="13" fill="var(--border-color)"/>
-        <ellipse cx="40" cy="62" rx="20" ry="14" fill="var(--border-color)"/>
-      </svg></div>
-      <div class="a-name">${a.name}</div>
-      <div class="a-major">${t(a.major || 'Multimedia Arts')}</div>
-      <div class="a-count"><strong>${a.artwork_count || 0}</strong> ${t('works')}</div>
-      <button class="btn btn-primary btn-sm" onclick="location.href='/profile/${a.username || a.uuid}'">${t('view_profile')}</button>
-    </article>
-  `).join('');
-}
-
-function filterArtistsModal() {
-  const q = (document.getElementById('artistsSearch')?.value || '').trim().toLowerCase();
-  const major = document.getElementById('artistsMajor')?.value || 'all';
-  let data = [...allArtistsData];
-  if (major !== 'all') data = data.filter(a => (a.major || '') === major);
-  if (q) {
-    data = data.filter(a =>
-      (a.name || '').toLowerCase().includes(q) ||
-      (a.major || '').toLowerCase().includes(q) ||
-      (a.year || '').toLowerCase().includes(q)
-    );
-  }
-  renderArtistsModal(data);
-}
-
-function openArtistsModal() {
-  const modal = document.getElementById('artistsModal');
-  if (!modal) return;
-  filterArtistsModal();
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden', 'false');
-}
-
+function openLb(a, idx) {
+  currentArtwork = a;
+  currentIndex = idx;
   document.getElementById('lbCat').textContent = a.category;
   document.getElementById('lbTitle').textContent = a.title;
   document.getElementById('lbDesc').textContent = a.description || '';
@@ -976,16 +934,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft') prevArtwork();
   if (e.key === 'ArrowRight') nextArtwork();
   if (e.key === 'Escape') closeLb();
-});
-
-document.getElementById('artistsModal')?.addEventListener('click', (e) => {
-  if (e.target === document.getElementById('artistsModal')) closeArtistsModal();
-});
-
-document.addEventListener('keydown', (e) => {
-  const modal = document.getElementById('artistsModal');
-  if (!modal?.classList.contains('open')) return;
-  if (e.key === 'Escape') closeArtistsModal();
 });
 
 async function toggleLike() {
