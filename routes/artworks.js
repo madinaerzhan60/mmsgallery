@@ -207,6 +207,21 @@ router.get('/', async (req, res) => {
   res.json(rows.map(withStats));
 });
 
+// GET /api/artworks/user/mine  (auth)
+router.get('/user/mine', auth, (req, res) => {
+  if (usePg) {
+    (async () => {
+      const result = await pgPool.query('SELECT * FROM artworks WHERE user_id=$1 ORDER BY created_at DESC', [req.user.id]);
+      const rows = await Promise.all(result.rows.map((row) => withStatsPg(row)));
+      return res.json(rows);
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load artworks' }));
+    return;
+  }
+
+  const rows = db.prepare('SELECT * FROM artworks WHERE user_id=? ORDER BY created_at DESC').all(req.user.id);
+  res.json(rows.map(withStats));
+});
+
 // GET /api/artworks/:uuid
 router.get('/:uuid', (req, res) => {
   if (usePg) {
@@ -480,21 +495,6 @@ router.post('/:uuid/comments', auth, (req, res) => {
   if (!a) return res.status(404).json({ error: 'Not found' });
   db.prepare('INSERT INTO comments (content, user_id, artwork_id) VALUES (?,?,?)').run(content, req.user.id, a.id);
   res.status(201).json({ ok: true });
-});
-
-// GET /api/artworks/user/mine  (auth)
-router.get('/user/mine', auth, (req, res) => {
-  if (usePg) {
-    (async () => {
-      const result = await pgPool.query('SELECT * FROM artworks WHERE user_id=$1 ORDER BY created_at DESC', [req.user.id]);
-      const rows = await Promise.all(result.rows.map((row) => withStatsPg(row)));
-      return res.json(rows);
-    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load artworks' }));
-    return;
-  }
-
-  const rows = db.prepare('SELECT * FROM artworks WHERE user_id=? ORDER BY created_at DESC').all(req.user.id);
-  res.json(rows.map(withStats));
 });
 
 router.use((err, req, res, next) => {
