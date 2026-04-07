@@ -181,14 +181,17 @@ function matchesArtworkFilters(row, { category, search, featured }) {
 }
 
 async function withStatsPg(artwork) {
+  const likesRow = await pgPool.query('SELECT COUNT(*)::int AS c FROM likes WHERE artwork_id=$1', [artwork.id]);
   const commentsRow = await pgPool.query('SELECT COUNT(*)::int AS c FROM comments WHERE artwork_id=$1', [artwork.id]);
   const authorRow = await pgPool.query(
     'SELECT id, uuid, username, name, COALESCE(profession, major) as major, year, avatar_url FROM users WHERE id=$1 LIMIT 1',
     [artwork.user_id]
   );
+  const likesFromTable = Number(likesRow.rows[0]?.c || 0);
+  const likes = Number(artwork.likes_count || 0) > likesFromTable ? Number(artwork.likes_count || 0) : likesFromTable;
   return {
     ...artwork,
-    likes: Number(artwork.likes_count || 0),
+    likes,
     comments: Number(commentsRow.rows[0]?.c || 0),
     author: authorRow.rows[0] || null,
     tags: artwork.tags ? String(artwork.tags).split(',') : []
@@ -494,17 +497,20 @@ router.post('/:uuid/like', auth, (req, res) => {
       const found = await pgPool.query('SELECT id FROM artworks WHERE uuid=$1 LIMIT 1', [req.params.uuid]);
       const a = found.rows[0];
       if (!a) return res.status(404).json({ error: 'Not found' });
+      const currentArtworkRow = await pgPool.query('SELECT likes_count FROM artworks WHERE id=$1 LIMIT 1', [a.id]);
+      const currentLikes = Number(currentArtworkRow.rows[0]?.likes_count || 0);
+      const likesRow = await pgPool.query('SELECT COUNT(*)::int as c FROM likes WHERE artwork_id=$1', [a.id]);
+      const likesFromTable = Number(likesRow.rows[0]?.c || 0);
+      const baselineLikes = Math.max(currentLikes, likesFromTable);
       const existing = await pgPool.query('SELECT id FROM likes WHERE user_id=$1 AND artwork_id=$2 LIMIT 1', [req.user.id, a.id]);
       if (existing.rows[0]) {
         await pgPool.query('DELETE FROM likes WHERE user_id=$1 AND artwork_id=$2', [req.user.id, a.id]);
-        const likesRow = await pgPool.query('SELECT COUNT(*)::int as c FROM likes WHERE artwork_id=$1', [a.id]);
-        const likes = Number(likesRow.rows[0]?.c || 0);
+        const likes = Math.max(0, baselineLikes - 1);
         await pgPool.query('UPDATE artworks SET likes_count=$1 WHERE id=$2', [likes, a.id]);
         return res.json({ liked: false, likes });
       }
       await pgPool.query('INSERT INTO likes (user_id, artwork_id) VALUES ($1,$2)', [req.user.id, a.id]);
-      const likesRow = await pgPool.query('SELECT COUNT(*)::int as c FROM likes WHERE artwork_id=$1', [a.id]);
-      const likes = Number(likesRow.rows[0]?.c || 0);
+      const likes = baselineLikes + 1;
       await pgPool.query('UPDATE artworks SET likes_count=$1 WHERE id=$2', [likes, a.id]);
       const owner = await pgPool.query('SELECT user_id FROM artworks WHERE id=$1', [a.id]);
       if (owner.rows[0] && owner.rows[0].user_id !== req.user.id) {
@@ -520,15 +526,19 @@ router.post('/:uuid/like', auth, (req, res) => {
 
   const a = db.prepare('SELECT id FROM artworks WHERE uuid=?').get(req.params.uuid);
   if (!a) return res.status(404).json({ error: 'Not found' });
+  const currentArtwork = db.prepare('SELECT likes_count FROM artworks WHERE id=?').get(a.id);
+  const currentLikes = Number(currentArtwork?.likes_count || 0);
+  const likesFromTable = db.prepare('SELECT COUNT(*) as c FROM likes WHERE artwork_id=?').get(a.id).c;
+  const baselineLikes = Math.max(currentLikes, likesFromTable);
   const existing = db.prepare('SELECT id FROM likes WHERE user_id=? AND artwork_id=?').get(req.user.id, a.id);
   if (existing) {
     db.prepare('DELETE FROM likes WHERE user_id=? AND artwork_id=?').run(req.user.id, a.id);
-    const likes = db.prepare('SELECT COUNT(*) as c FROM likes WHERE artwork_id=?').get(a.id).c;
+    const likes = Math.max(0, baselineLikes - 1);
     db.prepare('UPDATE artworks SET likes_count=? WHERE id=?').run(likes, a.id);
     res.json({ liked: false, likes });
   } else {
     db.prepare('INSERT INTO likes (user_id, artwork_id) VALUES (?,?)').run(req.user.id, a.id);
-    const likes = db.prepare('SELECT COUNT(*) as c FROM likes WHERE artwork_id=?').get(a.id).c;
+    const likes = baselineLikes + 1;
     db.prepare('UPDATE artworks SET likes_count=? WHERE id=?').run(likes, a.id);
     const owner = db.prepare('SELECT user_id FROM artworks WHERE id=?').get(a.id);
     if (owner && owner.user_id !== req.user.id) {
