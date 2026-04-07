@@ -442,11 +442,22 @@ function renderMenu() {
     account: t('account'),
     appearance: t('appearance'),
     notifications: t('notifications'),
-    privacy: t('privacy')
+    privacy: t('privacy'),
+    logout: t('logout')
   };
-  menu.innerHTML = sections.map((s) => `<button class="menu-btn ${s === activeSection ? 'active' : ''}" data-sec="${s}">${labels[s]}</button>`).join('');
+  const sectionButtons = sections
+    .map((s) => `<button class="menu-btn ${s === activeSection ? 'active' : ''}" data-sec="${s}">${labels[s]}</button>`)
+    .join('');
+  const logoutButton = `<button class="menu-btn" data-action="logout" style="color:#b42318;border-color:rgba(180,35,24,0.22);background:rgba(180,35,24,0.08)">${labels.logout}</button>`;
+  menu.innerHTML = sectionButtons + logoutButton;
   menu.querySelectorAll('.menu-btn').forEach((btn) => {
-    btn.addEventListener('click', () => showSection(btn.dataset.sec));
+    btn.addEventListener('click', () => {
+      if (btn.dataset.action === 'logout') {
+        logout();
+        return;
+      }
+      showSection(btn.dataset.sec);
+    });
   });
 
   document.getElementById('titleProfile').textContent = labels.profile;
