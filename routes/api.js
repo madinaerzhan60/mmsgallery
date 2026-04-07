@@ -100,8 +100,6 @@ function profileSelect() {
       u.year,
       u.bio,
       u.avatar_url,
-      u.cover_url,
-      u.cover_gradient,
       u.profession,
       u.linkedin_url,
       u.portfolio_url,
@@ -140,8 +138,6 @@ router.get('/artists', (req, res) => {
       u.year,
       u.bio,
       u.avatar_url,
-      u.cover_url,
-      u.cover_gradient,
       (SELECT COUNT(*) FROM artworks WHERE user_id=u.id AND status='approved') AS artwork_count
     FROM users u
     WHERE u.role='student'
@@ -169,8 +165,6 @@ router.get('/artists/:uuid', (req, res) => {
       year,
       bio,
       avatar_url,
-      cover_url,
-      cover_gradient,
       linkedin_url,
       portfolio_url,
       is_open_to_work,
@@ -207,8 +201,6 @@ router.get('/profiles', (req, res) => {
           u.year,
           u.bio,
           u.avatar_url,
-          u.cover_url,
-          u.cover_gradient,
           u.profession,
           u.linkedin_url,
           u.portfolio_url,
@@ -277,8 +269,6 @@ router.get('/profiles/:uuid', (req, res) => {
            u.year,
            u.bio,
            u.avatar_url,
-           u.cover_url,
-           u.cover_gradient,
            u.profession,
            u.linkedin_url,
            u.portfolio_url,
@@ -480,6 +470,39 @@ router.get('/hire', (req, res) => {
 });
 
 router.post('/profiles/:uuid/follow', auth, (req, res) => {
+  if (usePg) {
+    (async () => {
+      const target = await pgFindStudentByIdentifier(req.params.uuid);
+      if (!target) return res.status(404).json({ error: 'Profile not found' });
+      if (Number(target.id) === Number(req.user.id)) {
+        return res.status(400).json({ error: 'You cannot follow yourself' });
+      }
+
+      const privacyRow = await pgPool.query(
+        'SELECT privacy_allow_followers FROM users WHERE id=$1 LIMIT 1',
+        [target.id]
+      );
+      if (!Number(privacyRow.rows[0]?.privacy_allow_followers)) {
+        return res.status(403).json({ error: 'This user does not allow followers' });
+      }
+
+      const existing = await pgPool.query(
+        'SELECT id FROM follows WHERE follower_id=$1 AND following_id=$2 LIMIT 1',
+        [req.user.id, target.id]
+      );
+
+      if (existing.rows[0]) {
+        await pgPool.query('DELETE FROM follows WHERE follower_id=$1 AND following_id=$2', [req.user.id, target.id]);
+        return res.json({ following: false });
+      }
+
+      await pgPool.query('INSERT INTO follows (follower_id, following_id) VALUES ($1, $2)', [req.user.id, target.id]);
+      await pgPool.query('INSERT INTO notifications (user_id, type, from_user_id) VALUES ($1, $2, $3)', [target.id, 'follow', req.user.id]);
+      return res.json({ following: true });
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to follow profile' }));
+    return;
+  }
+
   const target = db.prepare(`
     SELECT id, privacy_allow_followers
     FROM users
@@ -503,6 +526,20 @@ router.post('/profiles/:uuid/follow', auth, (req, res) => {
 });
 
 router.get('/profiles/:uuid/follow-state', auth, (req, res) => {
+  if (usePg) {
+    (async () => {
+      const target = await pgFindStudentByIdentifier(req.params.uuid);
+      if (!target) return res.status(404).json({ error: 'Profile not found' });
+
+      const row = await pgPool.query(
+        'SELECT 1 FROM follows WHERE follower_id=$1 AND following_id=$2 LIMIT 1',
+        [req.user.id, target.id]
+      );
+      return res.json({ following: !!row.rows[0] });
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load follow state' }));
+    return;
+  }
+
   const target = findStudentByIdentifier(req.params.uuid);
   if (!target) return res.status(404).json({ error: 'Profile not found' });
 
