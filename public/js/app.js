@@ -1393,6 +1393,7 @@ function setAuth(token, user) {
   localStorage.setItem('mms_token', token);
   localStorage.setItem('mms_user', JSON.stringify(user));
   document.cookie = `mms_token=${encodeURIComponent(token)}; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+  window.dispatchEvent(new CustomEvent('mms:user-updated', { detail: { user } }));
 }
 function clearAuth() { 
   localStorage.removeItem('mms_token'); 

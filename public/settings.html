@@ -729,8 +729,29 @@ function bindEvents() {
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 3 * 1024 * 1024) return toast(t('avatarMaxSize3mb'), 'error');
-    pendingAvatarFile = await toSquare(file);
-    renderAvatarPreview();
+
+    try {
+      pendingAvatarFile = await toSquare(file);
+      renderAvatarPreview();
+
+      const fd = new FormData();
+      fd.append('avatar', pendingAvatarFile);
+      const avatarRes = await apiFetchForm('/api/users/avatar', fd, 'PATCH');
+      currentUser = avatarRes.user;
+      pendingAvatarFile = null;
+      setAuth(getToken(), currentUser);
+
+      const miniAvatar = document.getElementById('miniAvatar');
+      miniAvatar.src = resolveAvatarUrl(currentUser, 240);
+      miniAvatar.onerror = () => {
+        miniAvatar.onerror = null;
+        miniAvatar.src = avatarPlaceholder(currentUser?.name || 'U', 240);
+      };
+      renderAvatarPreview();
+      toast('Photo updated', 'success');
+    } catch (err) {
+      toast(err.message, 'error');
+    }
   });
 
   document.getElementById('coverInput').addEventListener('change', async (e) => {
@@ -784,22 +805,6 @@ function bindEvents() {
       setAuth(getToken(), currentUser);
       document.getElementById('miniName').textContent = currentUser.name || 'User';
       document.getElementById('miniProfession').textContent = t(currentUser.profession || '-') || currentUser.profession || '-';
-
-      if (pendingAvatarFile) {
-        const fd = new FormData();
-        fd.append('avatar', pendingAvatarFile);
-        const avatarRes = await apiFetchForm('/api/users/avatar', fd, 'PATCH');
-        currentUser = avatarRes.user;
-        setAuth(getToken(), currentUser);
-        const miniAvatar = document.getElementById('miniAvatar');
-        miniAvatar.src = resolveAvatarUrl(currentUser, 240);
-        miniAvatar.onerror = () => {
-          miniAvatar.onerror = null;
-          miniAvatar.src = avatarPlaceholder(currentUser?.name || 'U', 240);
-        };
-        pendingAvatarFile = null;
-        renderAvatarPreview();
-      }
 
       text.textContent = t('savedSuccessfully');
       setStatus('saveProfileStatus', t('savedSuccessfully'), true);

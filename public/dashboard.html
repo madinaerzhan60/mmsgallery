@@ -902,6 +902,14 @@ dropZone2?.addEventListener('drop', e => {
 loadSidebar(currentUser);
 loadMyWorks();
 loadProfile();
+
+window.addEventListener('mms:user-updated', (event) => {
+  currentUser = event.detail?.user || getUser();
+  if (!currentUser) return;
+  loadSidebar(currentUser);
+  updatePublicProfileLinks();
+  renderPublicProfilePreview();
+});
 </script>
 
 <div id="editWorkModal" class="edit-modal" onclick="if(event.target === this) closeEditWorkModal()">
