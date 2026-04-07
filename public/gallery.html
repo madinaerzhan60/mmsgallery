@@ -557,6 +557,28 @@ function isVideoArtwork(artwork) {
   return type === 'video' || category === 'video';
 }
 
+function normalizeCategory(value) {
+  const key = String(value || '').trim().toLowerCase();
+  const map = {
+    digital: 'digital art',
+    'digital art': 'digital art',
+    photography: 'photography',
+    '3d': '3d',
+    '3d and motion graphics': '3d',
+    animation: 'animation',
+    vfx: 'vfx',
+    'ux/ui': 'ux/ui',
+    'game art': 'game art',
+    illustration: 'illustration',
+    video: 'video',
+    'video and film': 'video',
+    interactive: 'interactive',
+    'interactive media': 'interactive',
+    other: 'other'
+  };
+  return map[key] || key;
+}
+
 function renderArtworkTileMedia(artwork, fallbackSeed) {
   if (isVideoArtwork(artwork) && artwork.file_url) {
     return `<video class="m-media" src="${artwork.file_url}" poster="${artwork.thumbnail_url || artwork.image_url || ''}" muted loop playsinline preload="metadata"></video>`;
@@ -648,7 +670,10 @@ async function fetchWorks() {
       works = await apiFetch('/api/feed/following');
       hasMore = false;
       document.getElementById('loadMore').style.display = 'none';
-      if (currentCat !== 'all') works = works.filter((w) => (w.category || '') === currentCat);
+      if (currentCat !== 'all') {
+        const selected = normalizeCategory(currentCat);
+        works = works.filter((w) => normalizeCategory(w.category) === selected);
+      }
       if (currentSearch) {
         const query = currentSearch.toLowerCase();
         works = works.filter((w) => (w.title || '').toLowerCase().includes(query) || (w.description || '').toLowerCase().includes(query));

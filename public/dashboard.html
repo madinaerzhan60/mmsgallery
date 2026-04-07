@@ -379,12 +379,17 @@
               <label class="form-label" data-i18n="categoryLabel">Category *</label>
               <select class="form-select" id="workCat2">
                 <option value="" data-i18n="selectCategoryOption">Select a category</option>
-                <option value="digital" data-i18n="cat_digital_art">Digital Art</option>
-                <option value="photography" data-i18n="cat_photography">Photography</option>
-                <option value="3d" data-i18n="cat_motion_graphics">3D and Motion Graphics</option>
-                <option value="illustration" data-i18n="cat_illustration">Illustration</option>
-                <option value="video" data-i18n="cat_video_film">Video and Film</option>
-                <option value="interactive" data-i18n="cat_interactive_media">Interactive Media</option>
+                <option value="Digital Art" data-i18n="cat_digital_art">Digital Art</option>
+                <option value="3D">3D</option>
+                <option value="Animation">Animation</option>
+                <option value="Photography" data-i18n="cat_photography">Photography</option>
+                <option value="VFX">VFX</option>
+                <option value="UX/UI">UX/UI</option>
+                <option value="Game Art">Game Art</option>
+                <option value="Illustration" data-i18n="cat_illustration">Illustration</option>
+                <option value="Video" data-i18n="cat_video_film">Video</option>
+                <option value="Interactive" data-i18n="cat_interactive_media">Interactive</option>
+                <option value="Other">Other</option>
               </select>
             </div>
             <div class="form-group">
@@ -471,6 +476,28 @@ let selectedFile2 = null;
 let myWorksCache = [];
 let editingWorkUuid = null;
 
+function normalizeCategoryValue(value) {
+  const key = String(value || '').trim().toLowerCase();
+  const map = {
+    digital: 'Digital Art',
+    'digital art': 'Digital Art',
+    photography: 'Photography',
+    '3d': '3D',
+    '3d and motion graphics': '3D',
+    animation: 'Animation',
+    vfx: 'VFX',
+    'ux/ui': 'UX/UI',
+    'game art': 'Game Art',
+    illustration: 'Illustration',
+    video: 'Video',
+    'video and film': 'Video',
+    interactive: 'Interactive',
+    'interactive media': 'Interactive',
+    other: 'Other'
+  };
+  return map[key] || value;
+}
+
 // Check URL tab param
 const urlTab = new URLSearchParams(location.search).get('tab');
 if (urlTab) showTab(urlTab);
@@ -552,7 +579,7 @@ function openEditWorkModal(uuid) {
 
   editingWorkUuid = uuid;
   document.getElementById('editWorkTitle').value = work.title || '';
-  document.getElementById('editWorkCategory').value = work.category || '';
+  document.getElementById('editWorkCategory').value = normalizeCategoryValue(work.category || '') || 'Other';
   document.getElementById('editWorkDescription').value = work.description || '';
   document.getElementById('editWorkTags').value = work.tags || '';
   document.getElementById('editWorkModal').classList.add('open');
@@ -566,7 +593,7 @@ function closeEditWorkModal() {
 async function saveWorkEdits() {
   if (!editingWorkUuid) return;
   const title = document.getElementById('editWorkTitle').value.trim();
-  const category = document.getElementById('editWorkCategory').value.trim();
+  const category = normalizeCategoryValue(document.getElementById('editWorkCategory').value.trim());
   const description = document.getElementById('editWorkDescription').value.trim();
   const tags = document.getElementById('editWorkTags').value.trim();
 
@@ -636,7 +663,7 @@ function handleFile2(input) {
 
 async function submitWork2() {
   const title = document.getElementById('workTitle2').value.trim();
-  const category = document.getElementById('workCat2').value;
+  const category = normalizeCategoryValue(document.getElementById('workCat2').value);
   const description = document.getElementById('workDesc2').value.trim();
   const tags = document.getElementById('workTags2').value.trim();
   const errorEl = document.getElementById('submitError');
@@ -800,12 +827,17 @@ loadProfile();
       <div class="form-group">
         <label class="form-label">Category</label>
         <select id="editWorkCategory" class="form-select">
-          <option value="digital">Digital Art</option>
-          <option value="photography">Photography</option>
-          <option value="3d">3D and Motion Graphics</option>
-          <option value="illustration">Illustration</option>
-          <option value="video">Video and Film</option>
-          <option value="interactive">Interactive Media</option>
+          <option value="Digital Art">Digital Art</option>
+          <option value="3D">3D</option>
+          <option value="Animation">Animation</option>
+          <option value="Photography">Photography</option>
+          <option value="VFX">VFX</option>
+          <option value="UX/UI">UX/UI</option>
+          <option value="Game Art">Game Art</option>
+          <option value="Illustration">Illustration</option>
+          <option value="Video">Video</option>
+          <option value="Interactive">Interactive</option>
+          <option value="Other">Other</option>
         </select>
       </div>
       <div class="form-group">
