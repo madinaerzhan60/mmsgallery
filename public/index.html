@@ -683,7 +683,7 @@
         <div class="section-eyebrow" data-i18n="creative_minds">Creative Minds</div>
         <h2 class="section-title" data-i18n="student_spotlight">Student Spotlight</h2>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="openArtistsModal()" data-i18n="view_more_artists">View More Artists</button>
+      <a class="btn btn-ghost btn-sm" href="/artists" data-i18n="view_more_artists">View More Artists</a>
     </div>
     <div class="artists-row" id="artistsRow"></div>
   </section>
@@ -926,17 +926,6 @@ function openArtistsModal() {
   modal.setAttribute('aria-hidden', 'false');
 }
 
-function closeArtistsModal() {
-  const modal = document.getElementById('artistsModal');
-  if (!modal) return;
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden', 'true');
-}
-
-// Lightbox
-function openLb(a, index) {
-  currentArtwork = a;
-  currentIndex = index !== undefined ? index : allArts.findIndex(x => x.uuid === a.uuid);
   document.getElementById('lbCat').textContent = a.category;
   document.getElementById('lbTitle').textContent = a.title;
   document.getElementById('lbDesc').textContent = a.description || '';
