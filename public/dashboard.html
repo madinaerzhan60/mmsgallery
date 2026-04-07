@@ -667,12 +667,29 @@ async function submitWork2() {
   const description = document.getElementById('workDesc2').value.trim();
   const tags = document.getElementById('workTags2').value.trim();
   const errorEl = document.getElementById('submitError');
+  const submitBtn = document.querySelector('button[onclick="submitWork2()"]');
+  const initialBtnLabel = submitBtn ? submitBtn.textContent : '';
   errorEl.style.display = 'none';
+
   if (!title || !category) { 
     errorEl.textContent = t('titleAndCategoryRequired'); 
     errorEl.style.display = 'block'; 
     return; 
   }
+
+  if (!selectedFile2) {
+    const msg = 'Please choose an image or video before submitting.';
+    errorEl.textContent = msg;
+    errorEl.style.display = 'block';
+    toast(msg, 'error');
+    return;
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = t('sending') || 'Sending...';
+  }
+
   try {
     const formData = new FormData();
     formData.append('title', title);
@@ -699,8 +716,18 @@ async function submitWork2() {
     loadMyWorks();
     showTab('works');
   } catch(e) { 
-    errorEl.textContent = e.message; 
+    const rawMessage = String(e?.message || 'Upload failed');
+    const readable = rawMessage.includes('Local file uploads are disabled on Vercel')
+      ? 'Upload is blocked on Vercel because files are not stored in cloud storage yet. I need to connect uploads to Supabase Storage.'
+      : rawMessage;
+    errorEl.textContent = readable;
     errorEl.style.display = 'block'; 
+    toast(readable, 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = initialBtnLabel;
+    }
   }
 }
 
