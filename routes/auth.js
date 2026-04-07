@@ -9,16 +9,25 @@ const fs = require('fs');
 const db = require('../database');
 const { auth, JWT_SECRET } = require('../middleware/auth');
 
+const isVercel = Boolean(process.env.VERCEL);
 const avatarDir = path.join(__dirname, '../public/uploads/avatars');
-if (!fs.existsSync(avatarDir)) fs.mkdirSync(avatarDir, { recursive: true });
-
-const avatarStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, avatarDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.png';
-    cb(null, `${uuidv4()}${ext}`);
+if (!isVercel) {
+  try {
+    if (!fs.existsSync(avatarDir)) fs.mkdirSync(avatarDir, { recursive: true });
+  } catch (error) {
+    console.warn('[avatar-upload] Failed to prepare avatar directory:', error.message);
   }
-});
+}
+
+const avatarStorage = isVercel
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: (req, file, cb) => cb(null, avatarDir),
+      filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname) || '.png';
+        cb(null, `${uuidv4()}${ext}`);
+      }
+    });
 
 const avatarUpload = multer({
   storage: avatarStorage,
@@ -266,6 +275,13 @@ router.post('/password', auth, (req, res) => {
 // POST /api/auth/avatar
 router.post('/avatar', auth, avatarUpload.single('avatar'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Avatar file is required' });
+
+  if (isVercel) {
+    return res.status(501).json({
+      error: 'Avatar upload to local filesystem is disabled on Vercel. Use Supabase Storage for uploads.'
+    });
+  }
+
   const avatarPath = `/uploads/avatars/${req.file.filename}`;
   db.prepare('UPDATE users SET avatar_url=? WHERE id=?').run(avatarPath, req.user.id);
   const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.user.id);
