@@ -5,10 +5,10 @@ const { DatabaseSync } = require('node:sqlite');
 
 const sqlitePath = path.join(__dirname, '..', 'mmsgallery.sqlite');
 const schemaPath = path.join(__dirname, '..', 'supabase', 'schema.sql');
-const supabaseDbUrl = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
+const supabaseDbUrl = process.env.DATABASE_URL;
 
 if (!supabaseDbUrl) {
-  console.error('Missing DATABASE_URL or SUPABASE_DB_URL environment variable.');
+  console.error('Missing DATABASE_URL environment variable.');
   process.exit(1);
 }
 

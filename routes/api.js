@@ -4,7 +4,7 @@ const db = require('../database');
 const { auth, adminOnly } = require('../middleware/auth');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../middleware/auth');
-const supabaseDbUrl = (process.env.DATABASE_URL || process.env.SUPABASE_DB_URL || '').trim();
+const supabaseDbUrl = String(process.env.DATABASE_URL || '').trim();
 const usePg = Boolean(supabaseDbUrl);
 const pgPool = usePg
   ? new Pool({

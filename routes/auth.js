@@ -4,24 +4,15 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
-const { Pool } = require('pg');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const db = require('../database');
+const { pgPool, usePg, ensurePgSchema } = require('../pg');
 const { auth, JWT_SECRET } = require('../middleware/auth');
 
-const supabaseDbUrl = (process.env.DATABASE_URL || process.env.SUPABASE_DB_URL || '').trim();
-const usePg = Boolean(supabaseDbUrl);
-const pgPool = usePg
-  ? new Pool({
-      connectionString: supabaseDbUrl,
-      ssl: { rejectUnauthorized: false }
-    })
-  : null;
-const pgSchemaPath = path.join(__dirname, '../supabase/schema.sql');
-let pgSchemaReady = false;
-let pgSchemaCheckDone = false;
+if (!usePg || !pgPool) {
+  console.warn('[auth] DATABASE_URL is missing. Auth routes require PostgreSQL.');
+}
 
 const isVercel = Boolean(process.env.VERCEL);
 const avatarDir = path.join(__dirname, '../public/uploads/avatars');
@@ -64,40 +55,12 @@ const emailVerificationEnv = String(process.env.EMAIL_VERIFICATION_REQUIRED || '
 const EMAIL_VERIFICATION_REQUIRED = emailVerificationEnv === 'true' || (emailVerificationEnv === '' && EMAIL_ENABLED);
 let mailTransporter = null;
 
-async function ensurePgSchema() {
-  if (!usePg || !pgPool) return false;
-  if (pgSchemaCheckDone) return pgSchemaReady;
-
-  pgSchemaCheckDone = true;
-  try {
-    const exists = await pgPool.query(
-      `SELECT 1
-       FROM information_schema.tables
-       WHERE table_schema='public' AND table_name='users'
-       LIMIT 1`
-    );
-
-    if (exists.rows[0]) {
-      pgSchemaReady = true;
-      return true;
-    }
-
-    const schemaSql = fs.readFileSync(pgSchemaPath, 'utf8');
-    await pgPool.query(schemaSql);
-
-    const recheck = await pgPool.query(
-      `SELECT 1
-       FROM information_schema.tables
-       WHERE table_schema='public' AND table_name='users'
-       LIMIT 1`
-    );
-    pgSchemaReady = Boolean(recheck.rows[0]);
-  } catch (error) {
-    pgSchemaReady = false;
-    console.warn('[supabase-schema] Failed to ensure Supabase schema:', error.message);
+function pgRequired(res) {
+  if (!usePg || !pgPool) {
+    res.status(500).json({ error: 'DATABASE_URL is not configured' });
+    return false;
   }
-
-  return pgSchemaReady;
+  return true;
 }
 
 function normalizeUsername(input = '') {
@@ -108,23 +71,25 @@ function isValidUsername(input = '') {
   return USERNAME_RE.test(String(input));
 }
 
-function issueEmailVerificationToken(userId) {
+async function issueEmailVerificationToken(userId) {
   const token = crypto.randomBytes(24).toString('hex');
-  db.prepare('DELETE FROM email_verification_tokens WHERE user_id=? AND used_at IS NULL').run(userId);
-  db.prepare(`
-    INSERT INTO email_verification_tokens (user_id, token, expires_at)
-    VALUES (?, ?, datetime('now', ?))
-  `).run(userId, token, `+${EMAIL_VERIFY_TTL_HOURS} hour`);
+  await pgPool.query('DELETE FROM email_verification_tokens WHERE user_id=$1 AND used_at IS NULL', [userId]);
+  await pgPool.query(
+    `INSERT INTO email_verification_tokens (user_id, token, expires_at)
+     VALUES ($1, $2, NOW() + ($3 || ' hour')::interval)`,
+    [userId, token, String(EMAIL_VERIFY_TTL_HOURS)]
+  );
   return token;
 }
 
-function issuePasswordResetToken(userId) {
+async function issuePasswordResetToken(userId) {
   const token = crypto.randomBytes(24).toString('hex');
-  db.prepare('DELETE FROM password_reset_tokens WHERE user_id=? AND used_at IS NULL').run(userId);
-  db.prepare(`
-    INSERT INTO password_reset_tokens (user_id, token, expires_at)
-    VALUES (?, ?, datetime('now', ?))
-  `).run(userId, token, `+${PASSWORD_RESET_TTL_HOURS} hour`);
+  await pgPool.query('DELETE FROM password_reset_tokens WHERE user_id=$1 AND used_at IS NULL', [userId]);
+  await pgPool.query(
+    `INSERT INTO password_reset_tokens (user_id, token, expires_at)
+     VALUES ($1, $2, NOW() + ($3 || ' hour')::interval)`,
+    [userId, token, String(PASSWORD_RESET_TTL_HOURS)]
+  );
   return token;
 }
 
@@ -186,147 +151,9 @@ async function sendPasswordResetEmail(email, name, token) {
   return false;
 }
 
-async function syncUserToPg(user) {
-  if (!usePg || !pgPool || !user) return true;
-  const schemaOk = await ensurePgSchema();
-  if (!schemaOk) {
-    console.warn('[supabase-sync] Skipping user sync because Supabase schema is not ready.');
-    return false;
-  }
-
-  const email = String(user.email || '').trim();
-  const username = String(user.username || '').trim();
-  const handle = String(user.handle || username || '').trim();
-
-  try {
-    const conflict = await pgPool.query(
-      `SELECT id, uuid
-       FROM users
-       WHERE uuid=$1
-          OR lower(email)=lower($2)
-          OR lower(username)=lower($3)
-          OR lower(handle)=lower($4)
-       LIMIT 1`,
-      [user.uuid, email, username, handle]
-    );
-
-    if (conflict.rows[0] && conflict.rows[0].uuid !== user.uuid) {
-      console.warn(
-        `[supabase-sync] Skipping user sync for ${email || username || user.uuid} because Supabase already has a different record for the same identity.`
-      );
-      return false;
-    }
-
-    if (conflict.rows[0]) {
-      await pgPool.query(
-        `UPDATE users
-         SET name=$2,
-             email=$3,
-             password=$4,
-             role=$5,
-             major=$6,
-             profession=$7,
-             year=$8,
-             bio=$9,
-             language_pref=$10,
-             username=$11,
-             handle=$12,
-             last_username_change=$13,
-             email_verified=$14,
-             email_verified_at=$15
-         WHERE uuid=$1`,
-        [
-          user.uuid,
-          user.name,
-          email,
-          user.password,
-          user.role || 'student',
-          user.major || user.profession || '',
-          user.profession || user.major || 'Other',
-          user.year || '',
-          user.bio || '',
-          user.language_pref || 'en',
-          username || null,
-          handle || null,
-          user.last_username_change || null,
-          Number(!!user.email_verified),
-          user.email_verified_at || null
-        ]
-      );
-      return true;
-    }
-
-    await pgPool.query(
-      `INSERT INTO users (uuid, name, email, password, role, major, profession, year, bio, language_pref, username, handle, last_username_change, email_verified, email_verified_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-       ON CONFLICT (uuid) DO UPDATE SET
-         name=EXCLUDED.name,
-         email=EXCLUDED.email,
-         password=EXCLUDED.password,
-         role=EXCLUDED.role,
-         major=EXCLUDED.major,
-         profession=EXCLUDED.profession,
-         year=EXCLUDED.year,
-         bio=EXCLUDED.bio,
-         language_pref=EXCLUDED.language_pref,
-         username=EXCLUDED.username,
-         handle=EXCLUDED.handle,
-         last_username_change=EXCLUDED.last_username_change,
-         email_verified=EXCLUDED.email_verified,
-         email_verified_at=EXCLUDED.email_verified_at`,
-      [
-        user.uuid,
-        user.name,
-        email,
-        user.password,
-        user.role || 'student',
-        user.major || user.profession || '',
-        user.profession || user.major || 'Other',
-        user.year || '',
-        user.bio || '',
-        user.language_pref || 'en',
-        username || null,
-        handle || null,
-        user.last_username_change || null,
-        Number(!!user.email_verified),
-        user.email_verified_at || null
-      ]
-    );
-    return true;
-  } catch (error) {
-    console.warn('[supabase-sync] Failed to sync user:', error.message);
-    return false;
-  }
-}
-
-function createLocalUserFromPg(pgUser) {
-  if (!pgUser) return null;
-  const exists = db.prepare('SELECT * FROM users WHERE uuid=? LIMIT 1').get(pgUser.uuid);
-  if (exists) return exists;
-  db.prepare(`
-    INSERT INTO users (uuid, name, email, password, role, major, profession, year, bio, language_pref, username, handle, last_username_change, email_verified, email_verified_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)
-  `).run(
-    pgUser.uuid,
-    pgUser.name,
-    pgUser.email,
-    pgUser.password,
-    pgUser.role || 'student',
-    pgUser.major || pgUser.profession || '',
-    pgUser.profession || pgUser.major || 'Other',
-    pgUser.year || '',
-    pgUser.bio || '',
-    pgUser.language_pref || 'en',
-    pgUser.username || normalizeUsername(pgUser.email?.split('@')[0] || `user_${Date.now()}`),
-    pgUser.handle || pgUser.username || normalizeUsername(pgUser.email?.split('@')[0] || `user_${Date.now()}`),
-    Number(pgUser.email_verified != null ? pgUser.email_verified : 1),
-    pgUser.email_verified_at || null
-  );
-  return db.prepare('SELECT * FROM users WHERE uuid=? LIMIT 1').get(pgUser.uuid);
-}
-
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
+  if (!pgRequired(res)) return;
   const { name, email, password, username, major, profession, year, bio, language_pref } = req.body;
   if (!name || !email || !password || !username)
     return res.status(400).json({ error: 'Name, username, email and password are required' });
@@ -336,39 +163,27 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Username must be 3-24 chars and use only letters, numbers, and underscores' });
   }
 
-  const exists = db.prepare('SELECT id FROM users WHERE lower(email) = lower(?)').get(email);
-  if (exists) return res.status(409).json({ error: 'Email already registered' });
+  await ensurePgSchema();
 
-  const usernameExists = db.prepare('SELECT id FROM users WHERE lower(username)=lower(?)').get(cleanUsername);
-  if (usernameExists) return res.status(409).json({ error: 'Username is already taken' });
-
-  if (usePg && pgPool) {
-    try {
-      await ensurePgSchema();
-      const pgConflict = await pgPool.query(
-        `SELECT id
-         FROM users
-         WHERE lower(email)=lower($1)
-            OR lower(username)=lower($2)
-            OR lower(handle)=lower($2)
-         LIMIT 1`,
-        [email, cleanUsername]
-      );
-      if (pgConflict.rows[0]) {
-        return res.status(409).json({ error: 'Email or username already exists in Supabase' });
-      }
-    } catch (error) {
-      console.warn('[supabase-sync] Registration conflict check failed:', error.message);
-    }
-  }
+  const conflict = await pgPool.query(
+    `SELECT id
+     FROM users
+     WHERE lower(email)=lower($1)
+        OR lower(username)=lower($2)
+        OR lower(handle)=lower($2)
+     LIMIT 1`,
+    [email, cleanUsername]
+  );
+  if (conflict.rows[0]) return res.status(409).json({ error: 'Email or username already registered' });
 
   const hash = bcrypt.hashSync(password, 10);
   const uuid = uuidv4();
   try {
-    db.prepare(`
-      INSERT INTO users (uuid, name, email, password, role, major, profession, year, bio, language_pref, username, handle, last_username_change, email_verified)
-      VALUES (?, ?, ?, ?, 'student', ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 0)
-    `).run(
+    const createdRes = await pgPool.query(
+      `INSERT INTO users (uuid, name, email, password, role, major, profession, year, bio, language_pref, username, handle, last_username_change, email_verified)
+       VALUES ($1,$2,$3,$4,'student',$5,$6,$7,$8,$9,$10,$11,NOW(),0)
+       RETURNING *`,
+      [
       uuid,
       name,
       email,
@@ -380,12 +195,16 @@ router.post('/register', async (req, res) => {
       language_pref || 'en',
       cleanUsername,
       cleanUsername
+      ]
     );
+    let user = createdRes.rows[0];
 
     if (!EMAIL_VERIFICATION_REQUIRED) {
-      db.prepare('UPDATE users SET email_verified=1, email_verified_at=CURRENT_TIMESTAMP WHERE uuid=?').run(uuid);
-      const created = db.prepare('SELECT * FROM users WHERE uuid = ?').get(uuid);
-      await syncUserToPg(created);
+      const updated = await pgPool.query(
+        'UPDATE users SET email_verified=1, email_verified_at=NOW() WHERE uuid=$1 RETURNING *',
+        [uuid]
+      );
+      user = updated.rows[0] || user;
       return res.status(201).json({
         ok: true,
         requiresEmailVerification: false,
@@ -393,20 +212,16 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE uuid = ?').get(uuid);
-    const verificationToken = issueEmailVerificationToken(user.id);
+    const verificationToken = await issueEmailVerificationToken(user.id);
     const sent = await sendVerificationEmail(user.email, user.name, verificationToken);
     if (!sent) {
-      db.prepare('UPDATE users SET email_verified=1, email_verified_at=CURRENT_TIMESTAMP WHERE id=?').run(user.id);
-      await syncUserToPg(db.prepare('SELECT * FROM users WHERE id=?').get(user.id));
+      await pgPool.query('UPDATE users SET email_verified=1, email_verified_at=NOW() WHERE id=$1', [user.id]);
       return res.status(201).json({
         ok: true,
         requiresEmailVerification: false,
         message: 'Registration successful. Email service is unavailable right now, so your account is already confirmed.'
       });
     }
-
-    await syncUserToPg(user);
 
     res.status(201).json({
       ok: true,
@@ -420,34 +235,21 @@ router.post('/register', async (req, res) => {
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
+  if (!pgRequired(res)) return;
   const { login, email, username, password } = req.body;
   const identifier = String(login || email || username || '').trim();
   if (!identifier || !password)
     return res.status(400).json({ error: 'Email/username and password are required' });
 
   const normalized = normalizeUsername(identifier);
-  let user = db.prepare(`
-    SELECT * FROM users
-    WHERE lower(email) = lower(?) OR lower(username) = lower(?)
-    LIMIT 1
-  `).get(identifier, normalized);
-
-  if (!user && usePg) {
-    try {
-      const fromPg = await pgPool.query(
-        `SELECT *
-         FROM users
-         WHERE lower(email)=lower($1) OR lower(username)=lower($2)
-         LIMIT 1`,
-        [identifier, normalized]
-      );
-      if (fromPg.rows[0]) {
-        user = createLocalUserFromPg(fromPg.rows[0]);
-      }
-    } catch {
-      // Continue with local auth only when PG is unavailable.
-    }
-  }
+  const userRes = await pgPool.query(
+    `SELECT *
+     FROM users
+     WHERE lower(email)=lower($1) OR lower(username)=lower($2) OR lower(handle)=lower($2)
+     LIMIT 1`,
+    [identifier, normalized]
+  );
+  const user = userRes.rows[0];
 
   if (!user || !bcrypt.compareSync(password, user.password))
     return res.status(401).json({ error: 'Invalid credentials' });
@@ -464,17 +266,20 @@ router.post('/login', async (req, res) => {
 });
 
 // GET /api/auth/verify-email?token=...
-router.get('/verify-email', (req, res) => {
+router.get('/verify-email', async (req, res) => {
+  if (!pgRequired(res)) return;
   const token = String(req.query.token || '').trim();
   if (!token) return res.status(400).send('Missing verification token');
 
-  const row = db.prepare(`
-    SELECT evt.id, evt.user_id, evt.expires_at, evt.used_at, u.email_verified
-    FROM email_verification_tokens evt
-    JOIN users u ON u.id = evt.user_id
-    WHERE evt.token = ?
-    LIMIT 1
-  `).get(token);
+  const rowRes = await pgPool.query(
+    `SELECT evt.id, evt.user_id, evt.expires_at, evt.used_at, u.email_verified
+     FROM email_verification_tokens evt
+     JOIN users u ON u.id = evt.user_id
+     WHERE evt.token = $1
+     LIMIT 1`,
+    [token]
+  );
+  const row = rowRes.rows[0];
 
   if (!row) return res.status(400).send('Invalid verification token');
   if (row.used_at) return res.status(400).send('This verification link was already used');
@@ -485,13 +290,14 @@ router.get('/verify-email', (req, res) => {
     return res.status(400).send('Verification link expired. Request a new one.');
   }
 
-  db.prepare('UPDATE users SET email_verified=1, email_verified_at=CURRENT_TIMESTAMP WHERE id=?').run(row.user_id);
-  db.prepare('UPDATE email_verification_tokens SET used_at=CURRENT_TIMESTAMP WHERE id=?').run(row.id);
+  await pgPool.query('UPDATE users SET email_verified=1, email_verified_at=NOW() WHERE id=$1', [row.user_id]);
+  await pgPool.query('UPDATE email_verification_tokens SET used_at=NOW() WHERE id=$1', [row.id]);
   return res.redirect('/auth?verified=1');
 });
 
 // POST /api/auth/resend-verification
-router.post('/resend-verification', (req, res) => {
+router.post('/resend-verification', async (req, res) => {
+  if (!pgRequired(res)) return;
   if (!EMAIL_VERIFICATION_REQUIRED) {
     return res.status(400).json({ error: 'Email verification is disabled for this environment' });
   }
@@ -500,19 +306,21 @@ router.post('/resend-verification', (req, res) => {
   if (!identifier) return res.status(400).json({ error: 'Email is required' });
 
   const normalized = normalizeUsername(identifier);
-  const user = db.prepare(`
-    SELECT id, email, name, email_verified
-    FROM users
-    WHERE lower(email)=lower(?) OR lower(username)=lower(?)
-    LIMIT 1
-  `).get(identifier, normalized);
+  const userRes = await pgPool.query(
+    `SELECT id, email, name, email_verified
+     FROM users
+     WHERE lower(email)=lower($1) OR lower(username)=lower($2) OR lower(handle)=lower($2)
+     LIMIT 1`,
+    [identifier, normalized]
+  );
+  const user = userRes.rows[0];
 
   if (!user) return res.status(404).json({ error: 'User not found' });
   if (Number(user.email_verified)) {
     return res.status(400).json({ error: 'Email is already verified' });
   }
 
-  const token = issueEmailVerificationToken(user.id);
+  const token = await issueEmailVerificationToken(user.id);
   sendVerificationEmail(user.email, user.name, token)
     .then(() => res.json({ ok: true, message: 'Verification email sent' }))
     .catch((error) => res.status(500).json({ error: error.message || 'Failed to send verification email' }));
@@ -520,28 +328,32 @@ router.post('/resend-verification', (req, res) => {
 
 // POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
+  if (!pgRequired(res)) return;
   const identifier = String(req.body.email || req.body.login || '').trim();
   if (!identifier) return res.status(400).json({ error: 'Email is required' });
 
   const normalized = normalizeUsername(identifier);
-  const user = db.prepare(`
-    SELECT id, email, name
-    FROM users
-    WHERE lower(email)=lower(?) OR lower(username)=lower(?)
-    LIMIT 1
-  `).get(identifier, normalized);
+  const userRes = await pgPool.query(
+    `SELECT id, email, name
+     FROM users
+     WHERE lower(email)=lower($1) OR lower(username)=lower($2) OR lower(handle)=lower($2)
+     LIMIT 1`,
+    [identifier, normalized]
+  );
+  const user = userRes.rows[0];
 
   if (!user) {
     return res.json({ ok: true, message: 'If this account exists, a reset email was sent.' });
   }
 
-  const token = issuePasswordResetToken(user.id);
+  const token = await issuePasswordResetToken(user.id);
   await sendPasswordResetEmail(user.email, user.name, token);
   return res.json({ ok: true, message: 'If this account exists, a reset email was sent.' });
 });
 
 // POST /api/auth/reset-password
-router.post('/reset-password', (req, res) => {
+router.post('/reset-password', async (req, res) => {
+  if (!pgRequired(res)) return;
   const token = String(req.body.token || '').trim();
   const newPassword = String(req.body.newPassword || '');
   if (!token || !newPassword) {
@@ -551,12 +363,14 @@ router.post('/reset-password', (req, res) => {
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
   }
 
-  const row = db.prepare(`
-    SELECT prt.id, prt.user_id, prt.expires_at, prt.used_at
-    FROM password_reset_tokens prt
-    WHERE prt.token = ?
-    LIMIT 1
-  `).get(token);
+  const rowRes = await pgPool.query(
+    `SELECT prt.id, prt.user_id, prt.expires_at, prt.used_at
+     FROM password_reset_tokens prt
+     WHERE prt.token = $1
+     LIMIT 1`,
+    [token]
+  );
+  const row = rowRes.rows[0];
 
   if (!row) return res.status(400).json({ error: 'Invalid reset token' });
   if (row.used_at) return res.status(400).json({ error: 'This reset link was already used' });
@@ -567,38 +381,49 @@ router.post('/reset-password', (req, res) => {
   }
 
   const hash = bcrypt.hashSync(newPassword, 10);
-  db.prepare('UPDATE users SET password=? WHERE id=?').run(hash, row.user_id);
-  db.prepare('UPDATE password_reset_tokens SET used_at=CURRENT_TIMESTAMP WHERE id=?').run(row.id);
+  await pgPool.query('UPDATE users SET password=$1 WHERE id=$2', [hash, row.user_id]);
+  await pgPool.query('UPDATE password_reset_tokens SET used_at=NOW() WHERE id=$1', [row.id]);
   return res.json({ ok: true, message: 'Password updated successfully' });
 });
 
 // GET /api/auth/me
-router.get('/me', auth, (req, res) => {
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+router.get('/me', auth, async (req, res) => {
+  if (!pgRequired(res)) return;
+  const userRes = await pgPool.query('SELECT * FROM users WHERE id=$1 LIMIT 1', [req.user.id]);
+  const user = userRes.rows[0];
   if (!user) return res.status(404).json({ error: 'User not found' });
   res.json(safeUser(user));
 });
 
 // PUT /api/auth/profile
-router.put('/profile', auth, (req, res) => {
+router.put('/profile', auth, async (req, res) => {
+  if (!pgRequired(res)) return;
   const { name, major, profession, year, bio } = req.body;
-  db.prepare('UPDATE users SET name=?, major=?, profession=?, year=?, bio=? WHERE id=?')
-    .run(name, major || profession, profession || major, year, bio, req.user.id);
-  const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.user.id);
+  await pgPool.query(
+    'UPDATE users SET name=$1, major=$2, profession=$3, year=$4, bio=$5 WHERE id=$6',
+    [name, major || profession, profession || major, year, bio, req.user.id]
+  );
+  const userRes = await pgPool.query('SELECT * FROM users WHERE id=$1 LIMIT 1', [req.user.id]);
+  const user = userRes.rows[0];
   res.json({ user: safeUser(user) });
 });
 
 // PATCH /api/auth/profile (compatibility for dashboard page)
-router.patch('/profile', auth, (req, res) => {
+router.patch('/profile', auth, async (req, res) => {
+  if (!pgRequired(res)) return;
   const { name, major, profession, year, bio } = req.body;
-  db.prepare('UPDATE users SET name=?, major=?, profession=?, year=?, bio=? WHERE id=?')
-    .run(name, major || profession, profession || major, year, bio, req.user.id);
-  const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.user.id);
+  await pgPool.query(
+    'UPDATE users SET name=$1, major=$2, profession=$3, year=$4, bio=$5 WHERE id=$6',
+    [name, major || profession, profession || major, year, bio, req.user.id]
+  );
+  const userRes = await pgPool.query('SELECT * FROM users WHERE id=$1 LIMIT 1', [req.user.id]);
+  const user = userRes.rows[0];
   res.json({ user: safeUser(user) });
 });
 
 // PATCH /api/auth/settings
-router.patch('/settings', auth, (req, res) => {
+router.patch('/settings', auth, async (req, res) => {
+  if (!pgRequired(res)) return;
   const {
     name,
     year,
@@ -610,42 +435,46 @@ router.patch('/settings', auth, (req, res) => {
     language_pref
   } = req.body;
 
-  db.prepare(`
-    UPDATE users
-    SET name=?, major=?, profession=?, year=?, bio=?, linkedin_url=?, portfolio_url=?,
-        is_open_to_work=?, language_pref=?
-    WHERE id=?
-  `).run(
-    name,
-    profession,
-    profession,
-    year,
-    bio,
-    linkedin_url || null,
-    portfolio_url || null,
-    Number(!!is_open_to_work),
-    language_pref || 'en',
-    req.user.id
+  await pgPool.query(
+    `UPDATE users
+     SET name=$1, major=$2, profession=$3, year=$4, bio=$5, linkedin_url=$6, portfolio_url=$7,
+         is_open_to_work=$8, language_pref=$9
+     WHERE id=$10`,
+    [
+      name,
+      profession,
+      profession,
+      year,
+      bio,
+      linkedin_url || null,
+      portfolio_url || null,
+      Number(!!is_open_to_work),
+      language_pref || 'en',
+      req.user.id
+    ]
   );
 
-  const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.user.id);
+  const userRes = await pgPool.query('SELECT * FROM users WHERE id=$1 LIMIT 1', [req.user.id]);
+  const user = userRes.rows[0];
   res.json({ user: safeUser(user) });
 });
 
 // POST /api/auth/password
-router.post('/password', auth, (req, res) => {
+router.post('/password', auth, async (req, res) => {
+  if (!pgRequired(res)) return;
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) {
     return res.status(400).json({ error: 'Current and new password are required' });
   }
 
-  const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.user.id);
+  const userRes = await pgPool.query('SELECT * FROM users WHERE id=$1 LIMIT 1', [req.user.id]);
+  const user = userRes.rows[0];
   if (!bcrypt.compareSync(currentPassword, user.password)) {
     return res.status(400).json({ error: 'Current password is incorrect' });
   }
 
   const nextHash = bcrypt.hashSync(newPassword, 10);
-  db.prepare('UPDATE users SET password=? WHERE id=?').run(nextHash, req.user.id);
+  await pgPool.query('UPDATE users SET password=$1 WHERE id=$2', [nextHash, req.user.id]);
   res.json({ ok: true });
 });
 
@@ -660,9 +489,10 @@ router.post('/avatar', auth, avatarUpload.single('avatar'), (req, res) => {
   }
 
   const avatarPath = `/uploads/avatars/${req.file.filename}`;
-  db.prepare('UPDATE users SET avatar_url=? WHERE id=?').run(avatarPath, req.user.id);
-  const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.user.id);
-  res.json({ user: safeUser(user) });
+  pgPool.query('UPDATE users SET avatar_url=$1 WHERE id=$2', [avatarPath, req.user.id])
+    .then(() => pgPool.query('SELECT * FROM users WHERE id=$1 LIMIT 1', [req.user.id]))
+    .then((result) => res.json({ user: safeUser(result.rows[0]) }))
+    .catch((error) => res.status(500).json({ error: error.message }));
 });
 
 function safeUser(u) {
