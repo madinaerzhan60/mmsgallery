@@ -4,12 +4,22 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const { createClient } = require('@supabase/supabase-js');
 const { pgPool, usePg } = require('../pg');
 const { auth } = require('../middleware/auth');
 
 const isVercel = Boolean(process.env.VERCEL);
 const avatarDir = path.join(__dirname, '../public/uploads/avatars');
 const coverDir = path.join(__dirname, '../public/uploads/covers');
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const storageBucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
+const supabaseEnabled = Boolean(supabaseUrl && supabaseServiceRoleKey);
+const supabase = supabaseEnabled
+  ? createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    })
+  : null;
 
 if (!isVercel) {
   try {
@@ -69,6 +79,38 @@ const USERNAME_COOLDOWN_DAYS = 10;
 
 function normalizeUsername(input = '') {
   return String(input).trim().toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+function extForFile(file) {
+  const guessed = path.extname(file.originalname || '').toLowerCase();
+  if (guessed) return guessed;
+  if ((file.mimetype || '').includes('png')) return '.png';
+  if ((file.mimetype || '').includes('webp')) return '.webp';
+  if ((file.mimetype || '').includes('gif')) return '.gif';
+  if ((file.mimetype || '').includes('jpeg') || (file.mimetype || '').includes('jpg')) return '.jpg';
+  return '.bin';
+}
+
+async function uploadToStorage(file, folder) {
+  if (!supabase) {
+    throw new Error('Cloud upload is not configured. Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.');
+  }
+
+  const objectPath = `${folder}/${uuidv4()}${extForFile(file)}`;
+  const { error: uploadError } = await supabase.storage
+    .from(storageBucket)
+    .upload(objectPath, file.buffer, {
+      contentType: file.mimetype || 'application/octet-stream',
+      upsert: false,
+      cacheControl: '3600'
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message || 'Failed to upload file to storage.');
+  }
+
+  const { data } = supabase.storage.from(storageBucket).getPublicUrl(objectPath);
+  return data.publicUrl;
 }
 
 async function getCurrentUser(req) {
@@ -181,14 +223,11 @@ router.patch('/profile', auth, async (req, res) => {
 router.patch('/avatar', auth, avatarUpload.single('avatar'), async (req, res) => {
   if (!pgRequired(res)) return;
   if (!req.file) return res.status(400).json({ error: 'Avatar file is required' });
-  if (isVercel) {
-    return res.status(501).json({
-      error: 'Avatar upload to local filesystem is disabled on Vercel. Use Supabase Storage for uploads.'
-    });
-  }
 
   try {
-    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    const avatarUrl = isVercel
+      ? await uploadToStorage(req.file, 'avatars')
+      : `/uploads/avatars/${req.file.filename}`;
     await pgPool.query('UPDATE users SET avatar_url=$1 WHERE uuid=$2', [avatarUrl, req.user.uuid]);
     const user = await getCurrentUser(req);
     res.json({ user: safeUser(user) });
@@ -200,15 +239,11 @@ router.patch('/avatar', auth, avatarUpload.single('avatar'), async (req, res) =>
 router.patch('/cover', auth, coverUpload.single('cover'), async (req, res) => {
   if (!pgRequired(res)) return;
 
-  if (isVercel && req.file) {
-    return res.status(501).json({
-      error: 'Cover upload to local filesystem is disabled on Vercel. Use Supabase Storage for uploads.'
-    });
-  }
-
   try {
     if (req.file) {
-      const coverUrl = `/uploads/covers/${req.file.filename}`;
+      const coverUrl = isVercel
+        ? await uploadToStorage(req.file, 'covers')
+        : `/uploads/covers/${req.file.filename}`;
       await pgPool.query('UPDATE users SET cover_url=$1, cover_gradient=$2 WHERE uuid=$3', [coverUrl, null, req.user.uuid]);
       const user = await getCurrentUser(req);
       return res.json({ user: safeUser(user) });
