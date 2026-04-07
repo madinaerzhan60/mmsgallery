@@ -486,23 +486,18 @@ router.get('/admin/students/export.csv', adminOnly, (req, res) => {
 router.patch('/admin/artworks/:id/status', adminOnly, (req, res) => {
   if (usePg) {
     (async () => {
-      const { status, featured } = req.body;
-      await pgPool.query(
-        'UPDATE artworks SET status=$1, featured=COALESCE($2, featured) WHERE id=$3',
-        [status, featured != null ? Number(featured) : null, Number(req.params.id)]
-      );
+      const { status } = req.body;
+      await pgPool.query('UPDATE artworks SET status=$1 WHERE id=$2', [status, Number(req.params.id)]);
       try {
-        db.prepare('UPDATE artworks SET status=?, featured=COALESCE(?,featured) WHERE id=?')
-          .run(status, featured != null ? Number(featured) : null, req.params.id);
+        db.prepare('UPDATE artworks SET status=? WHERE id=?').run(status, req.params.id);
       } catch {}
       return res.json({ ok: true });
     })().catch((error) => res.status(500).json({ error: error.message || 'Failed to update status' }));
     return;
   }
 
-  const { status, featured } = req.body;
-  db.prepare('UPDATE artworks SET status=?, featured=COALESCE(?,featured) WHERE id=?')
-    .run(status, featured != null ? Number(featured) : null, req.params.id);
+  const { status } = req.body;
+  db.prepare('UPDATE artworks SET status=? WHERE id=?').run(status, req.params.id);
   res.json({ ok: true });
 });
 

@@ -646,7 +646,7 @@ function renderArtworks(data) {
   const tbody = document.getElementById('artworksBody');
   tbody.innerHTML = data.length ? data.map(a => `
     <tr>
-      <td><div class="thumb" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">${a.image_url ? `<img src="${a.image_url}" style="width:100%;height:100%;object-fit:cover">` : artSVG(a.id, 50, 40)}</div></td>
+      <td><div class="thumb" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">${a.image_url ? `<img src="${a.image_url}" style="width:100%;height:100%;object-fit:cover">` : (a.file_type === 'video' && a.file_url ? `<video src="${a.file_url}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;background:#000"></video>` : artSVG(a.id, 50, 40))}</div></td>
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span class="artwork-title-link" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">${a.title}</span></td>
       <td style="color:var(--text-muted)">${a.author_name || '--'}</td>
       <td><span class="badge badge-gray">${a.category}</span></td>
@@ -656,8 +656,6 @@ function renderArtworks(data) {
       <td><div class="action-group">
         ${a.status !== 'approved' ? `<button class="btn btn-success btn-sm" onclick="setStatus(${a.id},'approved')">${t('approved')}</button>` : ''}
         ${a.status !== 'rejected' ? `<button class="btn btn-danger btn-sm" onclick="setStatus(${a.id},'rejected')">${t('rejected')}</button>` : ''}
-        ${a.featured ? `<button class="btn btn-ghost btn-sm" onclick="setFeatured(${a.id},0)">Unfeature</button>` :
-          `<button class="btn btn-ghost btn-sm" onclick="setFeatured(${a.id},1)">${t('feature') || 'Feature'}</button>`}
       </div></td>
     </tr>`).join('') : `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);font-style: normal">${t('noArtworksFound')}</td></tr>`;
 }
@@ -668,13 +666,6 @@ async function setStatus(id, status) {
     toast(`${t('statusUpdatedTo')} ${t(status) || status}`, 'success');
     loadArtworks();
     loadStats();
-  } catch(e) { toast(e.message, 'error'); }
-}
-async function setFeatured(id, featured) {
-  try {
-    await apiFetch('/api/admin/artworks/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status: allArtworksData.find(a => a.id === id)?.status || 'approved', featured }) });
-    toast(featured ? t('artworkFeatured') : t('artworkUnfeatured'), 'success');
-    loadArtworks();
   } catch(e) { toast(e.message, 'error'); }
 }
 
@@ -817,7 +808,9 @@ function handleOpenModal(artwork) {
   
   // Set image
   const imageContainer = document.getElementById('modalImageContainer');
-  if (artwork.image_url) {
+  if (artwork.file_type === 'video' && artwork.file_url) {
+    imageContainer.innerHTML = `<video src="${artwork.file_url}" poster="${artwork.thumbnail_url || artwork.image_url || ''}" controls autoplay playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;background:#000"></video>`;
+  } else if (artwork.image_url) {
     imageContainer.innerHTML = `<img src="${artwork.image_url}" alt="${artwork.title}">`;
   } else {
     imageContainer.innerHTML = artSVG(artwork.id, 500, 400);
