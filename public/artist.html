@@ -1145,7 +1145,14 @@ async function submitLightboxComment(event) {
 
 async function load() {
   try {
-    const artist = await apiFetch('/api/profiles/' + profileSlug);
+    let artist;
+    try {
+      artist = await apiFetch('/api/profiles/' + profileSlug);
+    } catch (profileError) {
+      // Fallback for legacy links/data where the profile endpoint cannot resolve slug.
+      artist = await apiFetch('/api/artists/' + profileSlug);
+    }
+
     if (artist?.username && artist.username !== profileSlug) {
       history.replaceState(null, '', `/profile/${artist.username}`);
     }
@@ -1248,7 +1255,8 @@ async function load() {
     renderCategoryTabs(artistWorks);
     renderWorksGrid();
   } catch(e) {
-    document.getElementById('content').innerHTML = '<div class="left-card" style="padding:42px;text-align:center">Profile not found.</div>';
+    const safeMessage = escapeHtml(e?.message || 'Profile not found.');
+    document.getElementById('content').innerHTML = `<div class="left-card" style="padding:42px;text-align:center">${safeMessage}</div>`;
   }
 }
 
