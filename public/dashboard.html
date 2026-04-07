@@ -535,19 +535,38 @@ function loadSidebar(u) {
 
 async function loadMyWorks() {
   try {
-    const works = await apiFetch('/api/artworks/user/mine');
-    myWorksCache = Array.isArray(works) ? works : [];
+    let works = await apiFetch('/api/artworks/user/mine');
+    if (!Array.isArray(works)) works = [];
+
+    if (!works.length) {
+      const slug = currentUser?.username || currentUser?.uuid;
+      if (slug) {
+        try {
+          const profile = await apiFetch('/api/profiles/' + encodeURIComponent(slug));
+          if (Array.isArray(profile?.artworks) && profile.artworks.length) {
+            works = profile.artworks;
+          }
+        } catch {
+          // Keep primary response if profile fallback fails.
+        }
+      }
+    }
+
+    myWorksCache = works;
     const total = works.length;
     const pending = works.filter(w => w.status === 'pending').length;
     const approved = works.filter(w => w.status === 'approved').length;
-    const likes = works.reduce((s, w) => s + (w.likes || 0), 0);
+    const likes = works.reduce((s, w) => s + (Number(w.likes || w.likes_count || 0)), 0);
     document.getElementById('dsTotal').textContent = total;
     document.getElementById('dsPending').textContent = pending;
     document.getElementById('dsApproved').textContent = approved;
     document.getElementById('dsLikes').textContent = likes;
     renderWorks(works, 'overviewWorks');
     renderWorks(works, 'myWorksGrid');
-  } catch(e) { console.error(e); }
+  } catch(e) {
+    console.error(e);
+    toast(e?.message || 'Failed to load your works', 'error');
+  }
 }
 
 function renderWorks(works, containerId) {

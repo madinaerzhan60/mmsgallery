@@ -226,15 +226,34 @@ router.get('/', async (req, res) => {
 router.get('/user/mine', auth, (req, res) => {
   if (usePg) {
     (async () => {
-      const result = await pgPool.query('SELECT * FROM artworks WHERE user_id=$1 ORDER BY created_at DESC', [req.user.id]);
+      const result = await pgPool.query(
+        `SELECT a.*
+         FROM artworks a
+         LEFT JOIN users u ON u.id = a.user_id
+         WHERE a.user_id = $1 OR u.uuid = $2
+         ORDER BY a.created_at DESC`,
+        [req.user.id, req.user.uuid]
+      );
       const pgRows = await Promise.all(result.rows.map((row) => withStatsPg(row)));
-      const sqliteRows = db.prepare('SELECT * FROM artworks WHERE user_id=? ORDER BY created_at DESC').all(req.user.id).map(withStats);
+      const sqliteRows = db.prepare(
+        `SELECT a.*
+         FROM artworks a
+         LEFT JOIN users u ON u.id = a.user_id
+         WHERE a.user_id = ? OR u.uuid = ?
+         ORDER BY a.created_at DESC`
+      ).all(req.user.id, req.user.uuid).map(withStats);
       return res.json(mergeArtworkRows(pgRows, sqliteRows));
     })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load artworks' }));
     return;
   }
 
-  const rows = db.prepare('SELECT * FROM artworks WHERE user_id=? ORDER BY created_at DESC').all(req.user.id);
+  const rows = db.prepare(
+    `SELECT a.*
+     FROM artworks a
+     LEFT JOIN users u ON u.id = a.user_id
+     WHERE a.user_id = ? OR u.uuid = ?
+     ORDER BY a.created_at DESC`
+  ).all(req.user.id, req.user.uuid);
   res.json(rows.map(withStats));
 });
 

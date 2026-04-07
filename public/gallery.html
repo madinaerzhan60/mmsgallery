@@ -554,6 +554,7 @@ const CATS = [
   { value: 'Interactive', label: 'Interactive' },
   { value: 'Other', label: 'Other' }
 ];
+const PAGE_SIZE = 1000;
 let page = 1, loading = false, hasMore = true, currentCat = 'all', currentSearch = '', currentSort = 'newest';
 let lbArtwork = null;
 let allWorks = []; // Store all loaded works for navigation
@@ -689,7 +690,7 @@ async function fetchWorks() {
         works = works.filter((w) => (w.title || '').toLowerCase().includes(query) || (w.description || '').toLowerCase().includes(query));
       }
     } else {
-      const params = new URLSearchParams({ limit: 16, page, ...(currentCat !== 'all' ? { category: currentCat } : {}), ...(currentSearch ? { search: currentSearch } : {}) });
+      const params = new URLSearchParams({ limit: PAGE_SIZE, page, ...(currentCat !== 'all' ? { category: currentCat } : {}), ...(currentSearch ? { search: currentSearch } : {}) });
       works = await apiFetch('/api/artworks?' + params);
     }
 
@@ -706,7 +707,7 @@ async function fetchWorks() {
       }
     }));
 
-    if (works.length < 16) { hasMore = false; document.getElementById('loadMore').style.display = 'none'; }
+    if (works.length < PAGE_SIZE) { hasMore = false; document.getElementById('loadMore').style.display = 'none'; }
     else document.getElementById('loadMore').style.display = 'block';
     if (currentSort === 'popular') works = works.sort((a, b) => (b.likes || 0) - (a.likes || 0));
     
