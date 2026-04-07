@@ -26,13 +26,19 @@ function getOptionalViewerId(req) {
 }
 
 function findStudentByIdentifier(identifier) {
-  const numericId = Number(identifier);
+  const normalized = String(identifier || '').trim();
+  const numericId = Number(normalized);
   return db.prepare(`
     SELECT id, uuid, username
     FROM users
-    WHERE role='student' AND (uuid=? OR username=? OR handle=? OR id=?)
+    WHERE role='student' AND (
+      uuid=?
+      OR lower(username)=lower(?)
+      OR lower(handle)=lower(?)
+      OR id=?
+    )
     LIMIT 1
-  `).get(identifier, identifier, identifier, Number.isNaN(numericId) ? null : numericId);
+  `).get(normalized, normalized, normalized, Number.isNaN(numericId) ? null : numericId);
 }
 
 function recordProfileView(targetUserId, viewerUserId = null) {
