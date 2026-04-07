@@ -71,9 +71,19 @@
   border: 1px solid var(--border-color);
   background: var(--bg-tertiary);
   overflow: hidden;
+  display: grid;
+  place-items: center;
+  position: relative;
 }
 .avatar-preview-box.circle { border-radius: 50%; }
 .avatar-preview-box img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-initial {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+  user-select: none;
+}
 .crop-tools { display: flex; gap: 8px; flex-wrap: wrap; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -210,6 +220,7 @@
           <div class="avatar-row">
             <div id="avatarPreviewBox" class="avatar-preview-box circle">
               <img id="avatarPreview" alt="Avatar preview">
+              <div id="avatarInitial" class="avatar-initial hidden">U</div>
             </div>
             <div>
               <div class="crop-tools">
@@ -417,6 +428,41 @@ function maskEmail(email = '') {
   if (!domain) return email;
   const safeLeft = left.length <= 2 ? `${left[0] || ''}*` : `${left.slice(0, 2)}***`;
   return `${safeLeft}@${domain}`;
+}
+
+function getInitial(name = '') {
+  const value = String(name || '').trim();
+  return value ? value.charAt(0).toUpperCase() : 'U';
+}
+
+function renderAvatarPreview() {
+  const avatarPreview = document.getElementById('avatarPreview');
+  const avatarInitial = document.getElementById('avatarInitial');
+  if (!avatarPreview || !avatarInitial || !currentUser) return;
+
+  const hasAvatar = !!currentUser.avatar_url || !!pendingAvatarFile;
+  if (hasAvatar) {
+    avatarPreview.classList.remove('hidden');
+    avatarInitial.classList.add('hidden');
+    if (pendingAvatarFile) {
+      avatarPreview.src = URL.createObjectURL(pendingAvatarFile);
+    } else {
+      const resolved = resolveAvatarUrl(currentUser, 240);
+      avatarPreview.src = resolved;
+      avatarPreview.onerror = () => {
+        avatarPreview.onerror = null;
+        avatarPreview.classList.add('hidden');
+        avatarInitial.textContent = getInitial(currentUser?.name || 'U');
+        avatarInitial.classList.remove('hidden');
+      };
+    }
+    return;
+  }
+
+  avatarPreview.removeAttribute('src');
+  avatarPreview.classList.add('hidden');
+  avatarInitial.textContent = getInitial(currentUser?.name || 'U');
+  avatarInitial.classList.remove('hidden');
 }
 
 function setStatus(nodeId, text, ok = true) {
@@ -627,7 +673,7 @@ async function loadUser() {
   };
   document.getElementById('miniName').textContent = currentUser.name || 'User';
   document.getElementById('miniProfession').textContent = t(currentUser.profession || currentUser.major || '-') || currentUser.profession || currentUser.major || '-';
-  document.getElementById('avatarPreview').src = miniAvatar.src;
+  renderAvatarPreview();
   document.getElementById('maskedEmail').value = maskEmail(currentUser.email || '');
 
   const yearSel = document.getElementById('year');
@@ -684,7 +730,7 @@ function bindEvents() {
     if (!file) return;
     if (file.size > 3 * 1024 * 1024) return toast(t('avatarMaxSize3mb'), 'error');
     pendingAvatarFile = await toSquare(file);
-    document.getElementById('avatarPreview').src = URL.createObjectURL(pendingAvatarFile);
+    renderAvatarPreview();
   });
 
   document.getElementById('coverInput').addEventListener('change', async (e) => {
@@ -752,6 +798,7 @@ function bindEvents() {
           miniAvatar.src = avatarPlaceholder(currentUser?.name || 'U', 240);
         };
         pendingAvatarFile = null;
+        renderAvatarPreview();
       }
 
       text.textContent = t('savedSuccessfully');
