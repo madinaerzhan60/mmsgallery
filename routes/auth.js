@@ -19,6 +19,9 @@ const pgPool = usePg
       ssl: { rejectUnauthorized: false }
     })
   : null;
+const pgSchemaPath = path.join(__dirname, '../supabase/schema.sql');
+let pgSchemaReady = false;
+let pgSchemaCheckDone = false;
 
 const isVercel = Boolean(process.env.VERCEL);
 const avatarDir = path.join(__dirname, '../public/uploads/avatars');
@@ -60,6 +63,42 @@ const EMAIL_ENABLED = Boolean(SMTP_USER && SMTP_PASS && SMTP_FROM);
 const emailVerificationEnv = String(process.env.EMAIL_VERIFICATION_REQUIRED || '').trim().toLowerCase();
 const EMAIL_VERIFICATION_REQUIRED = emailVerificationEnv === 'true' || (emailVerificationEnv === '' && EMAIL_ENABLED);
 let mailTransporter = null;
+
+async function ensurePgSchema() {
+  if (!usePg || !pgPool) return false;
+  if (pgSchemaCheckDone) return pgSchemaReady;
+
+  pgSchemaCheckDone = true;
+  try {
+    const exists = await pgPool.query(
+      `SELECT 1
+       FROM information_schema.tables
+       WHERE table_schema='public' AND table_name='users'
+       LIMIT 1`
+    );
+
+    if (exists.rows[0]) {
+      pgSchemaReady = true;
+      return true;
+    }
+
+    const schemaSql = fs.readFileSync(pgSchemaPath, 'utf8');
+    await pgPool.query(schemaSql);
+
+    const recheck = await pgPool.query(
+      `SELECT 1
+       FROM information_schema.tables
+       WHERE table_schema='public' AND table_name='users'
+       LIMIT 1`
+    );
+    pgSchemaReady = Boolean(recheck.rows[0]);
+  } catch (error) {
+    pgSchemaReady = false;
+    console.warn('[supabase-schema] Failed to ensure Supabase schema:', error.message);
+  }
+
+  return pgSchemaReady;
+}
 
 function normalizeUsername(input = '') {
   return String(input).trim().toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
@@ -149,6 +188,11 @@ async function sendPasswordResetEmail(email, name, token) {
 
 async function syncUserToPg(user) {
   if (!usePg || !pgPool || !user) return true;
+  const schemaOk = await ensurePgSchema();
+  if (!schemaOk) {
+    console.warn('[supabase-sync] Skipping user sync because Supabase schema is not ready.');
+    return false;
+  }
 
   const email = String(user.email || '').trim();
   const username = String(user.username || '').trim();
@@ -300,6 +344,7 @@ router.post('/register', async (req, res) => {
 
   if (usePg && pgPool) {
     try {
+      await ensurePgSchema();
       const pgConflict = await pgPool.query(
         `SELECT id
          FROM users
