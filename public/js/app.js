@@ -1387,6 +1387,19 @@ function clearAuth() {
 }
 function isLoggedIn() { return !!getToken(); }
 
+function avatarPlaceholder(name = 'U', size = 240) {
+  const seed = encodeURIComponent(String(name || 'U').charAt(0).toUpperCase());
+  return `https://placehold.co/${size}x${size}/2563eb/ffffff?text=${seed}`;
+}
+
+function resolveAvatarUrl(user, size = 240) {
+  const fallback = avatarPlaceholder(user?.name || 'U', size);
+  const raw = String(user?.avatar_url || '').trim();
+  if (!raw) return fallback;
+  if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+  return raw.startsWith('/') ? raw : `/${raw}`;
+}
+
 async function apiFetch(path, opts = {}) {
   const token = getToken();
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };

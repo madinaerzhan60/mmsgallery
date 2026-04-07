@@ -310,11 +310,7 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-profile">
-        <svg class="profile-avatar" viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="35" cy="35" r="35" fill="var(--bg-tertiary)"/>
-          <circle cx="35" cy="28" r="12" fill="var(--border-color)"/>
-          <ellipse cx="35" cy="56" rx="18" ry="13" fill="var(--border-color)"/>
-        </svg>
+        <img id="sidebarAvatar" class="profile-avatar" alt="Profile avatar">
         <div class="profile-name" id="sidebarName">Loading...</div>
         <div class="profile-major" id="sidebarMajor"></div>
         <div class="profile-year" id="sidebarYear"></div>
@@ -487,6 +483,14 @@ function showTab(name) {
 }
 
 function loadSidebar(u) {
+  const avatarNode = document.getElementById('sidebarAvatar');
+  if (avatarNode) {
+    avatarNode.src = resolveAvatarUrl(u, 160);
+    avatarNode.onerror = () => {
+      avatarNode.onerror = null;
+      avatarNode.src = avatarPlaceholder(u?.name || 'U', 160);
+    };
+  }
   document.getElementById('sidebarName').textContent = u.name;
   document.getElementById('sidebarMajor').textContent = u.major || 'Multimedia Arts';
   document.getElementById('sidebarYear').textContent = u.year || '';
@@ -711,8 +715,11 @@ function renderPublicProfilePreview() {
 
   if (!avatar || !name || !role || !bio || !link) return;
 
-  const seed = encodeURIComponent((currentUser?.name || 'U').charAt(0));
-  avatar.src = currentUser?.avatar_url || `https://placehold.co/160x160/2563eb/ffffff?text=${seed}`;
+  avatar.src = resolveAvatarUrl(currentUser, 160);
+  avatar.onerror = () => {
+    avatar.onerror = null;
+    avatar.src = avatarPlaceholder(currentUser?.name || 'U', 160);
+  };
   name.textContent = currentUser?.name || 'User';
   role.textContent = currentUser?.major || 'Multimedia Arts';
   bio.textContent = currentUser?.bio || 'No bio provided yet.';

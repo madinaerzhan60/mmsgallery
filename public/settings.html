@@ -380,6 +380,7 @@
 <script src="/js/app.js"></script>
 <script>
 if (!isLoggedIn()) location.href = '/auth';
+initTheme();
 
 const sections = ['profile', 'account', 'appearance', 'notifications', 'privacy'];
 const yearOptions = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Graduate'];
@@ -597,10 +598,15 @@ async function loadUser() {
     privacy_show_follower_count: !!currentUser.privacy_show_follower_count
   };
 
-  document.getElementById('miniAvatar').src = currentUser.avatar_url || `https://placehold.co/240x240/2563eb/ffffff?text=${encodeURIComponent((currentUser.name || 'U').charAt(0))}`;
+  const miniAvatar = document.getElementById('miniAvatar');
+  miniAvatar.src = resolveAvatarUrl(currentUser, 240);
+  miniAvatar.onerror = () => {
+    miniAvatar.onerror = null;
+    miniAvatar.src = avatarPlaceholder(currentUser?.name || 'U', 240);
+  };
   document.getElementById('miniName').textContent = currentUser.name || 'User';
   document.getElementById('miniProfession').textContent = t(currentUser.profession || currentUser.major || '-') || currentUser.profession || currentUser.major || '-';
-  document.getElementById('avatarPreview').src = document.getElementById('miniAvatar').src;
+  document.getElementById('avatarPreview').src = miniAvatar.src;
   document.getElementById('maskedEmail').value = maskEmail(currentUser.email || '');
 
   const yearSel = document.getElementById('year');
@@ -632,7 +638,11 @@ async function loadUser() {
     btn.onclick = () => applySwitchState(btn, !switchValue(btn));
   });
 
-  const theme = document.documentElement.getAttribute('data-theme') || 'light';
+  const savedTheme = localStorage.getItem('mms_theme');
+  const theme = (savedTheme === 'light' || savedTheme === 'dark')
+    ? savedTheme
+    : (document.documentElement.getAttribute('data-theme')
+      || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
   setThemeCard(theme);
   setLang(getLanguage());
 }
@@ -714,7 +724,12 @@ function bindEvents() {
         const avatarRes = await apiFetchForm('/api/users/avatar', fd, 'PATCH');
         currentUser = avatarRes.user;
         setAuth(getToken(), currentUser);
-        document.getElementById('miniAvatar').src = currentUser.avatar_url;
+        const miniAvatar = document.getElementById('miniAvatar');
+        miniAvatar.src = resolveAvatarUrl(currentUser, 240);
+        miniAvatar.onerror = () => {
+          miniAvatar.onerror = null;
+          miniAvatar.src = avatarPlaceholder(currentUser?.name || 'U', 240);
+        };
         pendingAvatarFile = null;
       }
 
