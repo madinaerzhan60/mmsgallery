@@ -843,7 +843,14 @@ function avatarFallback(name = 'U') {
 }
 
 function coverBackgroundForArtist(artist) {
-  const fallback = 'linear-gradient(135deg, #1e3a5f, #2563EB, #0ea5e9)';
+  const coverPresets = {
+    preset_1: 'linear-gradient(135deg, #1e3a5f, #2563EB)',
+    preset_2: 'linear-gradient(135deg, #0f172a, #7c3aed)',
+    preset_3: 'linear-gradient(135deg, #064e3b, #10b981)',
+    preset_4: 'linear-gradient(135deg, #7f1d1d, #ef4444)',
+    preset_5: 'linear-gradient(135deg, #1c1917, #d97706)'
+  };
+  const fallback = coverPresets.preset_1;
   const rawCover = String(artist?.cover_url || '').trim();
   if (rawCover) {
     const safeUrl = /^(https?:|data:|blob:)/i.test(rawCover) || rawCover.startsWith('/')
@@ -853,7 +860,7 @@ function coverBackgroundForArtist(artist) {
   }
 
   const preset = String(artist?.cover_gradient || '').trim();
-  if (preset) return preset;
+  if (preset) return coverPresets[preset] || preset;
   return fallback;
 }
 
