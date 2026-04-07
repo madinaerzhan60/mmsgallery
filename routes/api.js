@@ -66,6 +66,29 @@ function recordProfileView(targetUserId, viewerUserId = null) {
     .run(targetUserId, viewerUserId || null);
 }
 
+async function pgFindStudentByIdentifier(identifier) {
+  if (!usePg || !pgPool) return null;
+  const normalized = String(identifier || '').trim();
+  const underscoreVariant = normalized.replace(/-/g, '_');
+  const dashVariant = normalized.replace(/_/g, '-');
+  const numericId = Number(normalized);
+  const result = await pgPool.query(
+    `SELECT id, uuid, username
+     FROM users
+     WHERE role='student' AND (
+       uuid=$1
+       OR lower(username)=lower($2)
+       OR lower(username)=lower($3)
+       OR lower(handle)=lower($4)
+       OR lower(handle)=lower($5)
+       OR id=$6
+     )
+     LIMIT 1`,
+    [normalized, normalized, underscoreVariant, normalized, dashVariant, Number.isNaN(numericId) ? null : numericId]
+  );
+  return result.rows[0] || null;
+}
+
 function profileSelect() {
   return `
     SELECT
@@ -163,6 +186,53 @@ router.get('/artists/:uuid', (req, res) => {
 });
 
 router.get('/profiles', (req, res) => {
+  if (usePg) {
+    (async () => {
+      const { sort = 'newest', profession = 'all' } = req.query;
+      const params = [];
+      let idx = 1;
+      let query = `
+        SELECT
+          u.id,
+          u.uuid,
+          u.username,
+          u.name,
+          CASE WHEN u.privacy_show_email = 1 THEN u.email ELSE NULL END AS email,
+          u.year,
+          u.bio,
+          u.avatar_url,
+          u.profession,
+          u.linkedin_url,
+          u.portfolio_url,
+          u.is_open_to_work,
+          u.language_pref,
+          u.created_at,
+          (SELECT COUNT(*)::int FROM artworks a WHERE a.user_id=u.id AND a.status='approved') AS works_count,
+          (SELECT COALESCE(SUM(a.likes_count), 0)::int FROM artworks a WHERE a.user_id=u.id AND a.status='approved') AS likes_count,
+          (CASE
+            WHEN u.privacy_show_follower_count = 1 THEN (SELECT COUNT(*)::int FROM follows f WHERE f.following_id=u.id)
+            ELSE 0
+          END) AS followers_count,
+          (SELECT COUNT(*)::int FROM follows f WHERE f.follower_id=u.id) AS following_count
+        FROM users u
+        WHERE u.role='student'
+      `;
+
+      if (profession && profession !== 'all') {
+        query += ` AND COALESCE(u.profession, u.major) = $${idx++}`;
+        params.push(profession);
+      }
+
+      if (sort === 'likes') query += ' ORDER BY likes_count DESC, followers_count DESC';
+      else if (sort === 'followers') query += ' ORDER BY followers_count DESC, likes_count DESC';
+      else query += ' ORDER BY u.created_at DESC';
+
+      const rows = await pgPool.query(query, params);
+      return res.json(rows.rows);
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load profiles' }));
+    return;
+  }
+
   const { sort = 'newest', profession = 'all' } = req.query;
   const where = [];
   const params = [];
@@ -184,6 +254,71 @@ router.get('/profiles', (req, res) => {
 });
 
 router.get('/profiles/:uuid', (req, res) => {
+  if (usePg) {
+    (async () => {
+      const target = await pgFindStudentByIdentifier(req.params.uuid);
+      if (!target) return res.status(404).json({ error: 'Not found' });
+
+      const profileRes = await pgPool.query(
+        `SELECT
+           u.id,
+           u.uuid,
+           u.username,
+           u.name,
+           CASE WHEN u.privacy_show_email = 1 THEN u.email ELSE NULL END AS email,
+           u.year,
+           u.bio,
+           u.avatar_url,
+           u.profession,
+           u.linkedin_url,
+           u.portfolio_url,
+           u.is_open_to_work,
+           u.language_pref,
+           u.created_at,
+           (SELECT COUNT(*)::int FROM artworks a WHERE a.user_id=u.id AND a.status='approved') AS works_count,
+           (SELECT COALESCE(SUM(a.likes_count), 0)::int FROM artworks a WHERE a.user_id=u.id AND a.status='approved') AS likes_count,
+           (CASE
+             WHEN u.privacy_show_follower_count = 1 THEN (SELECT COUNT(*)::int FROM follows f WHERE f.following_id=u.id)
+             ELSE 0
+           END) AS followers_count,
+           (SELECT COUNT(*)::int FROM follows f WHERE f.follower_id=u.id) AS following_count
+         FROM users u
+         WHERE u.role='student' AND u.uuid=$1
+         LIMIT 1`,
+        [target.uuid]
+      );
+      const profile = profileRes.rows[0];
+      if (!profile) return res.status(404).json({ error: 'Not found' });
+
+      try {
+        await pgPool.query(
+          'INSERT INTO profile_views (viewed_user_id, viewer_user_id) VALUES ($1, $2)',
+          [profile.id, getOptionalViewerId(req)]
+        );
+      } catch {}
+
+      const artworksRes = await pgPool.query(
+        `SELECT
+           a.*,
+           (SELECT COUNT(*)::int FROM comments c WHERE c.artwork_id=a.id) AS comments
+         FROM artworks a
+         WHERE a.user_id=$1 AND a.status='approved'
+         ORDER BY a.created_at DESC`,
+        [profile.id]
+      );
+
+      const artworks = artworksRes.rows.map((row) => ({
+        ...row,
+        likes: Number(row.likes_count || 0),
+        comments: Number(row.comments || 0),
+        tags: row.tags ? String(row.tags).split(',') : []
+      }));
+
+      return res.json({ ...profile, major: profile.profession, artworks });
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load profile' }));
+    return;
+  }
+
   const target = findStudentByIdentifier(req.params.uuid);
   if (!target) return res.status(404).json({ error: 'Not found' });
 
@@ -267,6 +402,55 @@ router.get('/profiles/:uuid/following', (req, res) => {
 });
 
 router.get('/hire', (req, res) => {
+  if (usePg) {
+    (async () => {
+      const { sort = 'likes', profession = 'all' } = req.query;
+      const params = [];
+      let idx = 1;
+      let query = `
+        SELECT
+          u.id,
+          u.uuid,
+          u.username,
+          u.name,
+          CASE WHEN u.privacy_show_email = 1 THEN u.email ELSE NULL END AS email,
+          u.year,
+          u.bio,
+          u.avatar_url,
+          u.profession,
+          u.linkedin_url,
+          u.portfolio_url,
+          u.is_open_to_work,
+          u.language_pref,
+          u.created_at,
+          (SELECT COUNT(*)::int FROM artworks a WHERE a.user_id=u.id AND a.status='approved') AS works_count,
+          (SELECT COALESCE(SUM(a.likes_count), 0)::int FROM artworks a WHERE a.user_id=u.id AND a.status='approved') AS likes_count,
+          (CASE
+            WHEN u.privacy_show_follower_count = 1 THEN (SELECT COUNT(*)::int FROM follows f WHERE f.following_id=u.id)
+            ELSE 0
+          END) AS followers_count,
+          (SELECT COUNT(*)::int FROM follows f WHERE f.follower_id=u.id) AS following_count
+        FROM users u
+        WHERE u.role='student'
+          AND u.is_open_to_work = 1
+          AND u.privacy_show_open_to_work = 1
+      `;
+
+      if (profession && profession !== 'all') {
+        query += ` AND COALESCE(u.profession, u.major) = $${idx++}`;
+        params.push(profession);
+      }
+
+      if (sort === 'followers') query += ' ORDER BY followers_count DESC, likes_count DESC';
+      else if (sort === 'newest') query += ' ORDER BY u.created_at DESC';
+      else query += ' ORDER BY likes_count DESC, followers_count DESC';
+
+      const rows = await pgPool.query(query, params);
+      return res.json(rows.rows);
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load hire list' }));
+    return;
+  }
+
   const { sort = 'likes', profession = 'all' } = req.query;
   const filters = ['u.is_open_to_work = 1', 'u.privacy_show_open_to_work = 1'];
   const params = [];
