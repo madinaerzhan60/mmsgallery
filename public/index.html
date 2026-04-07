@@ -857,12 +857,9 @@ async function loadArtists() {
     artists.slice(0, 3).forEach((a, i) => {
       const card = document.createElement('div');
       card.className = 'reveal artist-card';
+      const avatarSrc = resolveAvatarUrl(a, 160);
       card.innerHTML = `
-        <div class="a-ring"><svg viewBox="0 0 80 80" class="a-img" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="40" cy="40" r="40" fill="var(--bg-tertiary)"/>
-          <circle cx="40" cy="32" r="13" fill="var(--border-color)"/>
-          <ellipse cx="40" cy="62" rx="20" ry="14" fill="var(--border-color)"/>
-        </svg></div>
+        <div class="a-ring"><img class="a-img" src="${avatarSrc}" alt="${a.name || 'Artist'}"></div>
         <div style="font-size:1.2rem;margin-bottom:6px">${['🥇','🥈','🥉'][i] || i + 1}</div>
         <div class="a-name">${a.name}</div>
         <div class="a-major">${t(a.profession || a.major || 'Multimedia Arts')}</div>
