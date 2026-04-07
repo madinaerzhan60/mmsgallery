@@ -1336,6 +1336,19 @@ function updateThemeIcon() {
   });
 }
 
+function ensureFavicon() {
+  const head = document.head || document.getElementsByTagName('head')[0];
+  if (!head) return;
+  let icon = document.querySelector('link[rel="icon"]');
+  if (!icon) {
+    icon = document.createElement('link');
+    icon.setAttribute('rel', 'icon');
+    head.appendChild(icon);
+  }
+  icon.setAttribute('type', 'image/svg+xml');
+  icon.setAttribute('href', '/favicon.svg');
+}
+
 /* ── Toast ── */
 let toastTimer;
 function toast(msg, type = 'info') {
@@ -1548,6 +1561,7 @@ function initReveal() {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadI18nDictionaries().finally(() => {
+    ensureFavicon();
     applyTranslations();
     renderGlobalFooter();
     initTheme();

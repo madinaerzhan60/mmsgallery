@@ -213,7 +213,24 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/artworks', require('./routes/artworks'));
 app.use('/api', require('./routes/api'));
 
+// Return JSON for API errors instead of Express HTML error pages.
+app.use((err, req, res, next) => {
+  if (!err) return next();
+  const status = Number(err.status || err.statusCode || 500);
+  const rawMessage = String(err.message || 'Internal Server Error');
+  const message = /readonly|read-only|SQLITE_READONLY/i.test(rawMessage)
+    ? 'Database is read-only in this environment. Configure a writable database for profile updates.'
+    : rawMessage;
+
+  if (String(req.path || '').startsWith('/api/')) {
+    return res.status(status).json({ error: message });
+  }
+
+  return next(err);
+});
+
 // ── SPA fallback ───────────────────────────────────────────────
+app.get('/favicon.ico', (req, res) => res.redirect(302, '/favicon.svg'));
 app.get('/', (req, res) => res.send(renderIndexForRequest(req)));
 app.get('/auth', (req, res) => res.sendFile(path.join(__dirname, 'public/auth.html')));
 app.get('/gallery', (req, res) => res.sendFile(path.join(__dirname, 'public/gallery.html')));
