@@ -748,7 +748,7 @@ async function loadFollowStats() {
         const ratio = r.following ? (r.followers / r.following).toFixed(2) : String(r.followers);
         return `
           <tr>
-            <td><a class="artist-link" href="/profile/${r.username}" target="_blank">${r.name}</a></td>
+            <td><a class="artist-link" href="/profile/${r.username || r.uuid}" target="_blank">${r.name}</a></td>
             <td>${r.followers}</td>
             <td>${r.following}</td>
             <td>${ratio}</td>
@@ -796,7 +796,7 @@ function handleOpenModal(artwork) {
   // Set artist link with profile URL
   const artistLink = document.getElementById('modalArtistLink');
   if (artwork.author_uuid) {
-    artistLink.href = `/profile/${artwork.author_username}`;
+    artistLink.href = `/profile/${artwork.author_username || artwork.author_uuid}`;
     artistLink.textContent = artwork.author_name || '--';
     artistLink.style.pointerEvents = 'auto';
   } else {

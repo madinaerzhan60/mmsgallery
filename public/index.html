@@ -855,7 +855,7 @@ async function loadArtists() {
         <div class="a-major">${t(a.profession || a.major || 'Multimedia Arts')}</div>
         <div class="a-count"><strong>${a.works_count || a.artwork_count || 0}</strong> ${t('works')} • <strong>${a.likes_count || 0}</strong> ${t('likes')}</div>
       `;
-      card.onclick = () => location.href = `/profile/${a.username}`;
+      card.onclick = () => location.href = `/profile/${a.username || a.uuid}`;
       row.appendChild(card);
     });
     buildArtistsMajorFilter();
@@ -888,7 +888,7 @@ function renderArtistsModal(artists) {
       <div class="a-name">${a.name}</div>
       <div class="a-major">${t(a.major || 'Multimedia Arts')}</div>
       <div class="a-count"><strong>${a.artwork_count || 0}</strong> ${t('works')}</div>
-      <button class="btn btn-primary btn-sm" onclick="location.href='/profile/${a.username}'">${t('view_profile')}</button>
+      <button class="btn btn-primary btn-sm" onclick="location.href='/profile/${a.username || a.uuid}'">${t('view_profile')}</button>
     </article>
   `).join('');
 }

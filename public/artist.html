@@ -913,7 +913,7 @@ function renderConnections(items, emptyText) {
             <div class="follower-name">${item.name}</div>
           </div>
         </div>
-        <a class="btn btn-ghost btn-sm" href="/profile/${item.username}">Профиль</a>
+        <a class="btn btn-ghost btn-sm" href="/profile/${item.username || item.uuid}">Профиль</a>
       </div>
     `).join('') : `<div style="color:var(--text-muted);padding:8px 0">${emptyText}</div>`;
 }

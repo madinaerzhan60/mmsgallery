@@ -687,7 +687,8 @@ function loadProfile() {
 }
 
 function getPublicProfileHref() {
-  return currentUser?.username ? `/profile/${currentUser.username}` : '';
+  const slug = currentUser?.username || currentUser?.uuid;
+  return slug ? `/profile/${slug}` : '';
 }
 
 function updatePublicProfileLinks() {

@@ -99,7 +99,7 @@ function renderProfessionFilters() {
 async function loadTopArtists() {
   const data = await apiFetch('/api/artists/top');
   document.getElementById('topArtistsGrid').innerHTML = data.map((artist, index) => `
-    <article class="top-card" onclick="location.href='/profile/${artist.username}'">
+    <article class="top-card" onclick="location.href='/profile/${artist.username || artist.uuid}'">
       <div class="rank-badge">${['🥇','🥈','🥉'][index] || index + 1}</div>
       <div class="profile-top">
         <img class="profile-avatar" src="${artist.avatar_url || 'https://placehold.co/120x120/1d4ed8/ffffff?text=' + encodeURIComponent(artist.name.charAt(0))}" alt="${artist.name}">
@@ -120,7 +120,7 @@ async function loadArtists() {
   const sort = document.getElementById('sortSelect').value;
   const data = await apiFetch(`/api/profiles?sort=${encodeURIComponent(sort)}&profession=${encodeURIComponent(currentProfession)}`);
   document.getElementById('artistsGrid').innerHTML = data.map((artist) => `
-    <article class="profile-card reveal" onclick="location.href='/profile/${artist.username}'">
+    <article class="profile-card reveal" onclick="location.href='/profile/${artist.username || artist.uuid}'">
       <div class="profile-top">
         <img class="profile-avatar" src="${artist.avatar_url || 'https://placehold.co/120x120/2563eb/ffffff?text=' + encodeURIComponent(artist.name.charAt(0))}" alt="${artist.name}">
         <div>
