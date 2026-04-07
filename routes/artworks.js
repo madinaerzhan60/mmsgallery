@@ -3,9 +3,19 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const { createClient } = require('@supabase/supabase-js');
 const db = require('../database');
 const { auth, adminOnly } = require('../middleware/auth');
 const isVercel = Boolean(process.env.VERCEL);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const storageBucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
+const supabaseEnabled = Boolean(supabaseUrl && supabaseServiceRoleKey);
+const supabase = supabaseEnabled
+  ? createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    })
+  : null;
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, '../public/uploads');
@@ -37,6 +47,38 @@ const upload = multer({
     cb(null, allowed.test(path.extname(file.originalname).toLowerCase()));
   }
 });
+
+function extForFile(file) {
+  const guessed = path.extname(file.originalname || '').toLowerCase();
+  if (guessed) return guessed;
+  if ((file.mimetype || '').includes('png')) return '.png';
+  if ((file.mimetype || '').includes('webp')) return '.webp';
+  if ((file.mimetype || '').includes('gif')) return '.gif';
+  if ((file.mimetype || '').includes('jpeg') || (file.mimetype || '').includes('jpg')) return '.jpg';
+  if ((file.mimetype || '').includes('mp4')) return '.mp4';
+  if ((file.mimetype || '').includes('quicktime')) return '.mov';
+  return '.bin';
+}
+
+async function uploadToStorage(file, folder) {
+  if (!supabase) {
+    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY for cloud uploads.');
+  }
+
+  const objectPath = `${folder}/${uuidv4()}${extForFile(file)}`;
+  const { error: uploadError } = await supabase.storage
+    .from(storageBucket)
+    .upload(objectPath, file.buffer, {
+      contentType: file.mimetype || 'application/octet-stream',
+      upsert: false,
+      cacheControl: '3600'
+    });
+
+  if (uploadError) throw new Error(uploadError.message || 'Failed to upload file to storage.');
+
+  const { data } = supabase.storage.from(storageBucket).getPublicUrl(objectPath);
+  return data.publicUrl;
+}
 
 function withStats(artwork) {
   const likesFromTable = db.prepare('SELECT COUNT(*) as c FROM likes WHERE artwork_id=?').get(artwork.id).c;
@@ -80,19 +122,26 @@ router.get('/:uuid', (req, res) => {
 });
 
 // POST /api/artworks  (auth)
-router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'file', maxCount: 1 }]), (req, res) => {
+router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'file', maxCount: 1 }]), async (req, res) => {
   try {
-    if (isVercel && (req.files?.image || req.files?.file)) {
-      return res.status(501).json({
-        error: 'Local file uploads are disabled on Vercel. Use Supabase Storage for media uploads.'
-      });
-    }
-
     const { title, description, category, tags } = req.body;
     if (!title || !category) return res.status(400).json({ error: 'Title and category required' });
 
-    const image_url = req.files?.image ? `/uploads/${req.files.image[0].filename}` : null;
-    const file_url = req.files?.file ? `/uploads/${req.files.file[0].filename}` : null;
+    let image_url = null;
+    let file_url = null;
+
+    if (req.files?.image) {
+      image_url = isVercel
+        ? await uploadToStorage(req.files.image[0], 'images')
+        : `/uploads/${req.files.image[0].filename}`;
+    }
+
+    if (req.files?.file) {
+      file_url = isVercel
+        ? await uploadToStorage(req.files.file[0], 'videos')
+        : `/uploads/${req.files.file[0].filename}`;
+    }
+
     const fileType = file_url ? 'video' : 'image';
     const uuid = uuidv4();
 
@@ -120,14 +169,18 @@ router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'f
 });
 
 // PUT /api/artworks/:uuid  (owner or admin)
-router.put('/:uuid', auth, upload.fields([{ name: 'image', maxCount: 1 }]), (req, res) => {
+router.put('/:uuid', auth, upload.fields([{ name: 'image', maxCount: 1 }]), async (req, res) => {
   const a = db.prepare('SELECT * FROM artworks WHERE uuid=?').get(req.params.uuid);
   if (!a) return res.status(404).json({ error: 'Not found' });
   if (a.user_id !== req.user.id && req.user.role !== 'admin')
     return res.status(403).json({ error: 'Forbidden' });
 
   const { title, description, category, tags, status, featured } = req.body;
-  const image_url = req.files?.image ? `/uploads/${req.files.image[0].filename}` : a.image_url;
+  const image_url = req.files?.image
+    ? (isVercel
+      ? await uploadToStorage(req.files.image[0], 'images')
+      : `/uploads/${req.files.image[0].filename}`)
+    : a.image_url;
 
   db.prepare(`UPDATE artworks SET title=?,description=?,category=?,tags=?,image_url=?,
     thumbnail_url=COALESCE(?, thumbnail_url), status=COALESCE(?,status), featured=COALESCE(?,featured) WHERE uuid=?`)
