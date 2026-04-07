@@ -1,9 +1,25 @@
 const { DatabaseSync } = require('node:sqlite');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
 const path = require('path');
 
-const dbPath = path.join(__dirname, 'mmsgallery.sqlite');
+const bundledDbPath = path.join(__dirname, 'mmsgallery.sqlite');
+const explicitDbPath = process.env.SQLITE_PATH || process.env.DB_PATH;
+const isVercel = Boolean(process.env.VERCEL);
+const dbPath = explicitDbPath || (isVercel ? '/tmp/mmsgallery.sqlite' : bundledDbPath);
+
+if (dbPath !== bundledDbPath && !fs.existsSync(dbPath)) {
+  try {
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+    if (fs.existsSync(bundledDbPath)) {
+      fs.copyFileSync(bundledDbPath, dbPath);
+    }
+  } catch (error) {
+    console.warn('[database] Failed to prepare writable DB path:', error.message);
+  }
+}
+
 const db = new DatabaseSync(dbPath);
 db.exec('PRAGMA foreign_keys = ON');
 
