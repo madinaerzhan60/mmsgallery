@@ -7,7 +7,7 @@ const { usePg, ensurePgSchema } = require('./pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const isVercel = Boolean(process.env.VERCEL);
+const isVercel = true; // Forced cloud storage
 
 // Ensure uploads dir exists
 const uploadsDir = path.join(__dirname, 'public/uploads');

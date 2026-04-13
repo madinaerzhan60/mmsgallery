@@ -7,14 +7,23 @@ const nodemailer = require('nodemailer');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { createClient } = require('@supabase/supabase-js');
 const { pgPool, usePg, ensurePgSchema } = require('../pg');
-const { auth, JWT_SECRET } = require('../middleware/auth');
+const { auth, JWT_SECRET, supabase } = require('../middleware/auth');
+
+// !! IMPORTANT: Use ANON key for user-facing auth (signUp / signIn).
+// The SERVICE_ROLE key bypasses email confirmation – never use it for signUp.
+const _anonKey = process.env.SUPABASE_ANON_KEY;
+const _supabaseUrl = process.env.SUPABASE_URL;
+const anonSupabase = (_anonKey && _supabaseUrl)
+  ? createClient(_supabaseUrl, _anonKey, { auth: { persistSession: false, autoRefreshToken: false } })
+  : supabase; // fallback to service-role if anon key not set (still better than nothing)
 
 if (!usePg || !pgPool) {
   console.warn('[auth] DATABASE_URL is missing. Auth routes require PostgreSQL.');
 }
 
-const isVercel = Boolean(process.env.VERCEL);
+const isVercel = true; // Forced cloud storage
 const avatarDir = path.join(__dirname, '../public/uploads/avatars');
 if (!isVercel) {
   try {
@@ -52,7 +61,7 @@ const SMTP_PASS = String(process.env.SMTP_PASS || '').trim();
 const SMTP_FROM = String(process.env.SMTP_FROM || SMTP_USER || '').trim();
 const EMAIL_ENABLED = Boolean(SMTP_USER && SMTP_PASS && SMTP_FROM);
 const emailVerificationEnv = String(process.env.EMAIL_VERIFICATION_REQUIRED || '').trim().toLowerCase();
-const EMAIL_VERIFICATION_REQUIRED = emailVerificationEnv === 'true' || (emailVerificationEnv === '' && EMAIL_ENABLED);
+const EMAIL_VERIFICATION_REQUIRED = true; // Forced verification requirement
 let mailTransporter = null;
 
 function pgRequired(res) {
@@ -158,6 +167,10 @@ router.post('/register', async (req, res) => {
   if (!name || !email || !password || !username)
     return res.status(400).json({ error: 'Name, username, email and password are required' });
 
+  if (!email.toLowerCase().endsWith('@sdu.edu.kz')) {
+    return res.status(400).json({ error: 'Email must be an @sdu.edu.kz address' });
+  }
+
   const cleanUsername = normalizeUsername(username);
   if (!isValidUsername(cleanUsername)) {
     return res.status(400).json({ error: 'Username must be 3-24 chars and use only letters, numbers, and underscores' });
@@ -176,9 +189,26 @@ router.post('/register', async (req, res) => {
   );
   if (conflict.rows[0]) return res.status(409).json({ error: 'Email or username already registered' });
 
-  const hash = bcrypt.hashSync(password, 10);
-  const uuid = uuidv4();
+  if (!anonSupabase) return res.status(500).json({ error: 'Supabase Auth not configured' });
+
   try {
+    const { data: authData, error: authError } = await anonSupabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name, username: cleanUsername } }
+    });
+
+    if (authError) {
+      return res.status(authError.status || 500).json({ error: authError.message });
+    }
+
+    // In case user already exists in auth.users and requires email confirmation, Supabase might not return the user cleanly or returns fake user, but typically authData.user is present.
+    if (!authData.user) {
+      return res.status(400).json({ error: 'Registration failed or email already submitted.' });
+    }
+
+    const uuid = authData.user.id;
+
     const createdRes = await pgPool.query(
       `INSERT INTO users (uuid, name, email, password, role, major, profession, year, bio, language_pref, username, handle, last_username_change, email_verified)
        VALUES ($1,$2,$3,$4,'student',$5,$6,$7,$8,$9,$10,$11,NOW(),0)
@@ -187,7 +217,7 @@ router.post('/register', async (req, res) => {
       uuid,
       name,
       email,
-      hash,
+      '[supabase-auth]',
       major || profession || '',
       profession || major || 'Other',
       year || '',
@@ -197,31 +227,6 @@ router.post('/register', async (req, res) => {
       cleanUsername
       ]
     );
-    let user = createdRes.rows[0];
-
-    if (!EMAIL_VERIFICATION_REQUIRED) {
-      const updated = await pgPool.query(
-        'UPDATE users SET email_verified=1, email_verified_at=NOW() WHERE uuid=$1 RETURNING *',
-        [uuid]
-      );
-      user = updated.rows[0] || user;
-      return res.status(201).json({
-        ok: true,
-        requiresEmailVerification: false,
-        message: 'Registration successful. You can log in now.'
-      });
-    }
-
-    const verificationToken = await issueEmailVerificationToken(user.id);
-    const sent = await sendVerificationEmail(user.email, user.name, verificationToken);
-    if (!sent) {
-      await pgPool.query('UPDATE users SET email_verified=1, email_verified_at=NOW() WHERE id=$1', [user.id]);
-      return res.status(201).json({
-        ok: true,
-        requiresEmailVerification: false,
-        message: 'Registration successful. Email service is unavailable right now, so your account is already confirmed.'
-      });
-    }
 
     res.status(201).json({
       ok: true,
@@ -241,27 +246,43 @@ router.post('/login', async (req, res) => {
   if (!identifier || !password)
     return res.status(400).json({ error: 'Email/username and password are required' });
 
+  if (!anonSupabase) return res.status(500).json({ error: 'Supabase Auth not configured' });
+
   const normalized = normalizeUsername(identifier);
   const userRes = await pgPool.query(
-    `SELECT *
+    `SELECT email
      FROM users
      WHERE lower(email)=lower($1) OR lower(username)=lower($2) OR lower(handle)=lower($2)
      LIMIT 1`,
     [identifier, normalized]
   );
-  const user = userRes.rows[0];
-
-  if (!user || !bcrypt.compareSync(password, user.password))
+  
+  if (!userRes.rows[0]) {
     return res.status(401).json({ error: 'Invalid credentials' });
-
-  if (EMAIL_VERIFICATION_REQUIRED && !Number(user.email_verified)) {
-    return res.status(403).json({
-      error: 'Please verify your email before logging in',
-      requiresEmailVerification: true
-    });
   }
 
-  const token = jwt.sign({ id: user.id, uuid: user.uuid, role: user.role, name: user.name, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+  const resolvedEmail = userRes.rows[0].email;
+
+  const { data: authData, error: authError } = await anonSupabase.auth.signInWithPassword({
+    email: resolvedEmail,
+    password
+  });
+
+  if (authError) {
+    return res.status(authError.status || 401).json({ error: authError.message });
+  }
+
+  const token = authData.session.access_token;
+  const fullUserRes = await pgPool.query(
+    `SELECT * FROM users WHERE uuid=$1 LIMIT 1`,
+    [authData.user.id]
+  );
+
+  const user = fullUserRes.rows[0];
+  if (!user) {
+     return res.status(404).json({ error: 'User mapping not found' });
+  }
+
   res.json({ token, user: safeUser(user) });
 });
 
@@ -332,23 +353,25 @@ router.post('/forgot-password', async (req, res) => {
   const identifier = String(req.body.email || req.body.login || '').trim();
   if (!identifier) return res.status(400).json({ error: 'Email is required' });
 
+  if (!anonSupabase) return res.status(500).json({ error: 'Supabase Auth not configured' });
+
   const normalized = normalizeUsername(identifier);
   const userRes = await pgPool.query(
-    `SELECT id, email, name
+    `SELECT email
      FROM users
      WHERE lower(email)=lower($1) OR lower(username)=lower($2) OR lower(handle)=lower($2)
      LIMIT 1`,
     [identifier, normalized]
   );
-  const user = userRes.rows[0];
-
-  if (!user) {
-    return res.json({ ok: true, message: 'If this account exists, a reset email was sent.' });
+  
+  if (userRes.rows[0]) {
+    const { error } = await anonSupabase.auth.resetPasswordForEmail(userRes.rows[0].email, {
+      redirectTo: (process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`) + '/auth?mode=reset_fragment'
+    });
+    if (error) console.error('[supabase-auth] Reset password error:', error.message);
   }
 
-  const token = await issuePasswordResetToken(user.id);
-  await sendPasswordResetEmail(user.email, user.name, token);
-  return res.json({ ok: true, message: 'If this account exists, a reset email was sent.' });
+  return res.json({ ok: true, message: 'If this account exists, a recovery email was sent by Supabase.' });
 });
 
 // POST /api/auth/reset-password
@@ -363,27 +386,29 @@ router.post('/reset-password', async (req, res) => {
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
   }
 
-  const rowRes = await pgPool.query(
-    `SELECT prt.id, prt.user_id, prt.expires_at, prt.used_at
-     FROM password_reset_tokens prt
-     WHERE prt.token = $1
-     LIMIT 1`,
-    [token]
-  );
-  const row = rowRes.rows[0];
+  // In the Supabase Auth model, the frontend performs an auth action using the tokens embedded in the hash fragment.
+  // However, if the frontend successfully intercepts the fragment, authenticates the session, and passes a Bearer token:
+  if (!supabase) return res.status(500).json({ error: 'Supabase Auth not configured' });
 
-  if (!row) return res.status(400).json({ error: 'Invalid reset token' });
-  if (row.used_at) return res.status(400).json({ error: 'This reset link was already used' });
-
-  const expiry = new Date(row.expires_at).getTime();
-  if (Number.isFinite(expiry) && expiry < Date.now()) {
-    return res.status(400).json({ error: 'Reset link expired. Request a new one.' });
+  // Assume this endpoint is protected by the `auth` middleware if Bearer exists. But `routes.post('/reset-password')` wasn't protected before.
+  // Let's require auth dynamically or read header.
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing session token from recovery flow.' });
   }
+  const tokenBytes = header.slice(7);
 
-  const hash = bcrypt.hashSync(newPassword, 10);
-  await pgPool.query('UPDATE users SET password=$1 WHERE id=$2', [hash, row.user_id]);
-  await pgPool.query('UPDATE password_reset_tokens SET used_at=NOW() WHERE id=$1', [row.id]);
-  return res.json({ ok: true, message: 'Password updated successfully' });
+  const { createClient } = require('@supabase/supabase-js');
+  const scopedSupabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { global: { headers: { Authorization: `Bearer ${tokenBytes}` } } }
+  );
+
+  const { error } = await scopedSupabase.auth.updateUser({ password: newPassword });
+  if (error) return res.status(error.status || 500).json({ error: error.message });
+
+  return res.json({ ok: true, message: 'Password updated successfully via Supabase' });
 });
 
 // GET /api/auth/me

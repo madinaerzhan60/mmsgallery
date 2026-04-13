@@ -1,49 +1,12 @@
-const jwt = require('jsonwebtoken');
 const { pgPool, usePg } = require('../pg');
-const JWT_SECRET = process.env.JWT_SECRET || 'lumina_secret_2025_change_in_production';
+const { createClient } = require('@supabase/supabase-js');
 
-async function getPgUserByPayload(payload) {
-  if (!usePg || !pgPool) return null;
-
-  const queries = [];
-  if (payload.uuid) queries.push(['SELECT * FROM users WHERE uuid=$1 LIMIT 1', [payload.uuid]]);
-  if (payload.id != null) queries.push(['SELECT * FROM users WHERE id=$1 LIMIT 1', [payload.id]]);
-  if (payload.username) {
-    queries.push(['SELECT * FROM users WHERE lower(username)=lower($1) LIMIT 1', [payload.username]]);
-    queries.push(['SELECT * FROM users WHERE lower(handle)=lower($1) LIMIT 1', [payload.username]]);
-  }
-  if (payload.handle) queries.push(['SELECT * FROM users WHERE lower(handle)=lower($1) LIMIT 1', [payload.handle]]);
-
-  for (const [query, values] of queries) {
-    try {
-      const result = await pgPool.query(query, values);
-      if (result.rows[0]) return result.rows[0];
-    } catch {
-      // Try the next identity hint.
-    }
-  }
-
-  return null;
-}
-
-function matchesTokenIdentity(user, payload) {
-  if (!user) return false;
-  if (payload.uuid) return user.uuid === payload.uuid;
-  if (payload.username) {
-    const username = normalizeIdentity(payload.username);
-    return normalizeIdentity(user.username) === username || normalizeIdentity(user.handle) === username;
-  }
-  if (payload.handle) {
-    const handle = normalizeIdentity(payload.handle);
-    return normalizeIdentity(user.handle) === handle || normalizeIdentity(user.username) === handle;
-  }
-  if (payload.id != null) return Number(user.id) === Number(payload.id);
-  return true;
-}
-
-function normalizeIdentity(value = '') {
-  return String(value).trim().toLowerCase();
-}
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseEnabled = Boolean(supabaseUrl && supabaseAnonKey);
+const supabase = supabaseEnabled 
+  ? createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false, autoRefreshToken: false } })
+  : null;
 
 async function auth(req, res, next) {
   if (!usePg || !pgPool) {
@@ -54,19 +17,28 @@ async function auth(req, res, next) {
   if (!header || !header.startsWith('Bearer '))
     return res.status(401).json({ error: 'No token provided' });
 
-  try {
-    const payload = jwt.verify(header.slice(7), JWT_SECRET);
-    const user = await getPgUserByPayload(payload);
+  const token = header.slice(7);
 
-    if (!matchesTokenIdentity(user, payload)) {
-      return res.status(401).json({ error: 'Session expired. Please log in again' });
+  if (!supabaseEnabled) {
+     return res.status(500).json({ error: 'Supabase is not configured' });
+  }
+
+  try {
+    const { data: { user: sbUser }, error } = await supabase.auth.getUser(token);
+    if (error || !sbUser) {
+      return res.status(401).json({ error: 'Session expired or invalid token' });
     }
-    if (user.role !== 'admin' && !Number(user.email_verified)) {
-      return res.status(403).json({ error: 'Please verify your email before using this feature' });
+
+    const result = await pgPool.query('SELECT * FROM users WHERE uuid=$1 LIMIT 1', [sbUser.id]);
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(401).json({ error: 'User record not found in database' });
     }
+
     req.user = user;
     next();
-  } catch {
+  } catch (err) {
     res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
@@ -79,4 +51,5 @@ function adminOnly(req, res, next) {
   });
 }
 
-module.exports = { auth, adminOnly, JWT_SECRET };
+const JWT_SECRET = process.env.JWT_SECRET || 'lumina_secret_for_legacy'; 
+module.exports = { auth, adminOnly, JWT_SECRET, supabase };

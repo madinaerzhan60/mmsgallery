@@ -6,7 +6,7 @@ const path = require('path');
 
 const bundledDbPath = path.join(__dirname, 'mmsgallery.sqlite');
 const explicitDbPath = process.env.SQLITE_PATH || process.env.DB_PATH;
-const isVercel = Boolean(process.env.VERCEL);
+const isVercel = true; // Forced cloud storage
 const dbPath = explicitDbPath || (isVercel ? '/tmp/mmsgallery.sqlite' : bundledDbPath);
 
 if (dbPath !== bundledDbPath && !fs.existsSync(dbPath)) {

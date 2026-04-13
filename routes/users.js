@@ -8,7 +8,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { pgPool, usePg } = require('../pg');
 const { auth } = require('../middleware/auth');
 
-const isVercel = Boolean(process.env.VERCEL);
+const isVercel = true; // Forced cloud storage
 const avatarDir = path.join(__dirname, '../public/uploads/avatars');
 const coverDir = path.join(__dirname, '../public/uploads/covers');
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -393,6 +393,14 @@ router.delete('/account', auth, async (req, res) => {
 
     if (!email_confirmation || String(email_confirmation).trim().toLowerCase() !== String(user.email).toLowerCase()) {
       return res.status(400).json({ error: 'Email confirmation does not match your account email' });
+    }
+
+    if (supabaseEnabled && supabase.auth.admin) {
+      const { error: authError } = await supabase.auth.admin.deleteUser(req.user.uuid);
+      if (authError) {
+        console.warn('[supabase-auth] Failed to delete user from Supabase Auth:', authError.message);
+        // We decide to proceed with local deletion or we can throw. Usually it's better to proceed so they aren't stuck.
+      }
     }
 
     await pgPool.query('DELETE FROM users WHERE uuid=$1', [req.user.uuid]);

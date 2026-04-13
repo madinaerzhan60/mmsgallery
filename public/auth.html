@@ -151,7 +151,7 @@
       <div id="loginForm" class="form-wrap">
         <div class="form-group">
           <label class="form-label">Email or Username</label>
-          <input class="form-input" type="text" id="loginIdentifier" placeholder="your@university.edu or username" autocomplete="username">
+          <input class="form-input" type="text" id="loginIdentifier" placeholder="your@sdu.edu.kz or username" autocomplete="username">
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
@@ -167,7 +167,7 @@
       <div id="forgotForm" class="form-wrap" style="display:none">
         <div class="form-group">
           <label class="form-label">Email</label>
-          <input class="form-input" type="email" id="forgotEmail" placeholder="your@university.edu" autocomplete="email">
+          <input class="form-input" type="email" id="forgotEmail" placeholder="your@sdu.edu.kz" autocomplete="email">
         </div>
         <button class="btn btn-primary submit-btn" onclick="doForgotPassword()">Send reset link</button>
         <button class="btn btn-ghost submit-btn" onclick="switchTab('login')">Back to login</button>
@@ -235,7 +235,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">Email Address</label>
-          <input class="form-input" type="email" id="regEmail" placeholder="your@university.edu" autocomplete="email">
+          <input class="form-input" type="email" id="regEmail" placeholder="your@sdu.edu.kz" autocomplete="email">
         </div>
         <div class="field-row">
           <div class="form-group">
@@ -327,6 +327,10 @@ async function doRegister() {
     showError('Name, username, email, password and profession are required');
     return;
   }
+  if (!email.toLowerCase().endsWith('@sdu.edu.kz')) {
+    showError('Email must be an @sdu.edu.kz address');
+    return;
+  }
   if (password !== pass2) {
     showError(t('passwordsDoNotMatch'));
     return;
@@ -383,15 +387,15 @@ async function doForgotPassword() {
   }
 }
 
+let recoveryToken = '';
+
 async function doResetPassword() {
   hideError();
-  const params = new URLSearchParams(location.search);
-  const token = params.get('token') || '';
   const password = document.getElementById('resetPass').value;
   const pass2 = document.getElementById('resetPass2').value;
 
-  if (!token) {
-    showError('Missing reset token');
+  if (!recoveryToken) {
+    showError('Missing reset token. Please use the link from your email.');
     return;
   }
   if (!password || password.length < 6) {
@@ -406,7 +410,8 @@ async function doResetPassword() {
   try {
     await apiFetch('/api/auth/reset-password', {
       method: 'POST',
-      body: JSON.stringify({ token, newPassword: password })
+      headers: { 'Authorization': `Bearer ${recoveryToken}` },
+      body: JSON.stringify({ newPassword: password })
     });
     toast('Password updated. Please sign in.', 'success');
     history.replaceState({}, '', '/auth');
@@ -423,8 +428,19 @@ document.addEventListener('keydown', (e) => {
 });
 
 const params = new URLSearchParams(location.search);
-if (params.get('mode') === 'register') switchTab('register');
-if (params.get('mode') === 'reset' && params.get('token')) switchTab('reset');
+const hashParams = new URLSearchParams(location.hash.substring(1));
+
+if (hashParams.get('type') === 'recovery' && hashParams.get('access_token')) {
+  recoveryToken = hashParams.get('access_token');
+  switchTab('reset');
+} else if (params.get('mode') === 'register') {
+  switchTab('register');
+} else if (params.get('mode') === 'reset' && params.get('token')) {
+  // Graceful fallback for legacy links
+  recoveryToken = params.get('token');
+  switchTab('reset');
+}
+
 if (params.get('verified') === '1') {
   toast('Email verified successfully. You can now log in.', 'success');
 }
