@@ -260,7 +260,12 @@
 
 <script src="/js/app.js"></script>
 <script>
-if (isLoggedIn()) {
+// Check for Supabase recovery hash FIRST — before any login redirects
+const _hashParams = new URLSearchParams(location.hash.substring(1));
+const _isRecovery = _hashParams.get('type') === 'recovery' && _hashParams.get('access_token');
+
+// Only redirect to dashboard if logged in AND this is NOT a password recovery link
+if (!_isRecovery && isLoggedIn()) {
   location.href = '/dashboard';
 }
 
