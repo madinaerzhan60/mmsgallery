@@ -366,7 +366,7 @@ router.post('/forgot-password', async (req, res) => {
   
   if (userRes.rows[0]) {
     const { error } = await anonSupabase.auth.resetPasswordForEmail(userRes.rows[0].email, {
-      redirectTo: (process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`) + '/auth?mode=reset_fragment'
+      redirectTo: (process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`) + '/reset-password'
     });
     if (error) console.error('[supabase-auth] Reset password error:', error.message);
   }

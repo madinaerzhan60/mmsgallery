@@ -56,6 +56,7 @@ app.use((err, req, res, next) => {
 app.get('/favicon.ico', (req, res) => res.redirect(302, '/favicon.svg'));
 app.get('/', (req, res) => res.send(renderIndexForRequest()));
 app.get('/auth', (req, res) => res.sendFile(path.join(__dirname, 'public/auth.html')));
+app.get('/reset-password', (req, res) => res.sendFile(path.join(__dirname, 'public/reset-password.html')));
 app.get('/gallery', (req, res) => res.sendFile(path.join(__dirname, 'public/gallery.html')));
 app.get('/artists', (req, res) => res.sendFile(path.join(__dirname, 'public/artists.html')));
 app.get('/hire', (req, res) => res.sendFile(path.join(__dirname, 'public/hire.html')));
