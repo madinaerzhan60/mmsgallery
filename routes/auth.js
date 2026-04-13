@@ -377,26 +377,21 @@ router.post('/forgot-password', async (req, res) => {
 // POST /api/auth/reset-password
 router.post('/reset-password', async (req, res) => {
   if (!pgRequired(res)) return;
-  const token = String(req.body.token || '').trim();
   const newPassword = String(req.body.newPassword || '');
-  if (!token || !newPassword) {
-    return res.status(400).json({ error: 'Token and new password are required' });
+  if (!newPassword) {
+    return res.status(400).json({ error: 'New password is required' });
   }
   if (newPassword.length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
   }
 
-  // In the Supabase Auth model, the frontend performs an auth action using the tokens embedded in the hash fragment.
-  // However, if the frontend successfully intercepts the fragment, authenticates the session, and passes a Bearer token:
-  if (!supabase) return res.status(500).json({ error: 'Supabase Auth not configured' });
-
-  // Assume this endpoint is protected by the `auth` middleware if Bearer exists. But `routes.post('/reset-password')` wasn't protected before.
-  // Let's require auth dynamically or read header.
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
+  const header = req.headers.authorization || '';
+  if (!header.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing session token from recovery flow.' });
   }
   const tokenBytes = header.slice(7);
+
+  if (!supabase) return res.status(500).json({ error: 'Supabase Auth not configured' });
 
   const { createClient } = require('@supabase/supabase-js');
   const scopedSupabase = createClient(
