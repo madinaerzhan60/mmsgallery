@@ -395,14 +395,22 @@ router.post('/reset-password', async (req, res) => {
 
   if (!supabase) return res.status(500).json({ error: 'Supabase Auth not configured' });
 
-  // 1. Get the user from the token
+  // 1. Get the user from the token using the existing client
   const { data: userData, error: userError } = await supabase.auth.getUser(tokenBytes);
   if (userError || !userData.user) {
     return res.status(401).json({ error: userError?.message || 'Invalid or expired recovery token' });
   }
 
-  // 2. Use Admin API to update the user's password directly (bypassing local session check)
-  const { error } = await supabase.auth.admin.updateUserById(userData.user.id, {
+  // 2. Use Admin API to update the user's password directly (requires SERVICE_ROLE_KEY)
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) return res.status(500).json({ error: 'Server misconfiguration: missing service role key' });
+  
+  const { createClient } = require('@supabase/supabase-js');
+  const adminSupabase = createClient(process.env.SUPABASE_URL, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+
+  const { error } = await adminSupabase.auth.admin.updateUserById(userData.user.id, {
     password: newPassword
   });
 
