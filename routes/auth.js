@@ -365,8 +365,10 @@ router.post('/forgot-password', async (req, res) => {
   );
   
   if (userRes.rows[0]) {
+    // Dynamically detect the current domain so it always matches the environment (localhost vs mmsgallery.tech vs vercel)
+    const baseUrl = process.env.APP_BASE_URL || (req.hostname === 'localhost' ? 'http://localhost:3000' : `https://${req.get('host')}`);
     const { error } = await anonSupabase.auth.resetPasswordForEmail(userRes.rows[0].email, {
-      redirectTo: (process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`) + '/reset-password'
+      redirectTo: `${baseUrl}/reset-password`
     });
     if (error) console.error('[supabase-auth] Reset password error:', error.message);
   }
