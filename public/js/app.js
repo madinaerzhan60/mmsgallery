@@ -1365,11 +1365,29 @@ function toast(msg, type = 'info') {
   toastTimer = setTimeout(() => el.className = '', 3000);
 }
 
-/* ── Nav scroll ── */
+/* ── Nav scroll & Mobile Nav ── */
 function initNavScroll() {
   const nav = document.querySelector('nav');
   if (!nav) return;
   window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 50));
+}
+
+function initMobileNav() {
+  const nav = document.querySelector('nav');
+  if (!nav || document.querySelector('.mobile-toggle')) return;
+  
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'mobile-toggle';
+  toggleBtn.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
+  toggleBtn.setAttribute('aria-label', 'Toggle mobile menu');
+  toggleBtn.onclick = () => nav.classList.toggle('mobile-open');
+  
+  const logo = nav.querySelector('.brand-logo');
+  if (logo && logo.nextSibling) {
+    nav.insertBefore(toggleBtn, logo.nextSibling);
+  } else {
+    nav.appendChild(toggleBtn);
+  }
 }
 
 /* ── Auth helpers ── */
@@ -1568,6 +1586,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderGlobalFooter();
     initTheme();
     initNavScroll();
+    initMobileNav();
     updateNavAuth();
     initReveal();
   });
