@@ -36,12 +36,12 @@ if (!isVercel) {
 const avatarStorage = isVercel
   ? multer.memoryStorage()
   : multer.diskStorage({
-      destination: (req, file, cb) => cb(null, avatarDir),
-      filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname) || '.png';
-        cb(null, `${uuidv4()}${ext}`);
-      }
-    });
+    destination: (req, file, cb) => cb(null, avatarDir),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname) || '.png';
+      cb(null, `${uuidv4()}${ext}`);
+    }
+  });
 
 const avatarUpload = multer({
   storage: avatarStorage,
@@ -214,17 +214,17 @@ router.post('/register', async (req, res) => {
        VALUES ($1,$2,$3,$4,'student',$5,$6,$7,$8,$9,$10,$11,NOW(),0)
        RETURNING *`,
       [
-      uuid,
-      name,
-      email,
-      '[supabase-auth]',
-      major || profession || '',
-      profession || major || 'Other',
-      year || '',
-      bio || '',
-      language_pref || 'en',
-      cleanUsername,
-      cleanUsername
+        uuid,
+        name,
+        email,
+        '[supabase-auth]',
+        major || profession || '',
+        profession || major || 'Other',
+        year || '',
+        bio || '',
+        language_pref || 'en',
+        cleanUsername,
+        cleanUsername
       ]
     );
 
@@ -256,7 +256,7 @@ router.post('/login', async (req, res) => {
      LIMIT 1`,
     [identifier, normalized]
   );
-  
+
   if (!userRes.rows[0]) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
@@ -280,7 +280,7 @@ router.post('/login', async (req, res) => {
 
   const user = fullUserRes.rows[0];
   if (!user) {
-     return res.status(404).json({ error: 'User mapping not found' });
+    return res.status(404).json({ error: 'User mapping not found' });
   }
 
   res.json({ token, user: safeUser(user) });
@@ -363,12 +363,10 @@ router.post('/forgot-password', async (req, res) => {
      LIMIT 1`,
     [identifier, normalized]
   );
-  
+
   if (userRes.rows[0]) {
-    // Dynamically detect the current domain so it always matches the environment (localhost vs mmsgallery.tech vs vercel)
-    const baseUrl = process.env.APP_BASE_URL || (req.hostname === 'localhost' ? 'http://localhost:3000' : `https://${req.get('host')}`);
     const { error } = await anonSupabase.auth.resetPasswordForEmail(userRes.rows[0].email, {
-      redirectTo: `${baseUrl}/reset-password`
+      redirectTo: (process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`) + '/reset-password'
     });
     if (error) console.error('[supabase-auth] Reset password error:', error.message);
   }
@@ -395,28 +393,20 @@ router.post('/reset-password', async (req, res) => {
 
   if (!supabase) return res.status(500).json({ error: 'Supabase Auth not configured' });
 
-  // 1. Get the user from the token using the existing client
+  // 1. Get the user from the token
   const { data: userData, error: userError } = await supabase.auth.getUser(tokenBytes);
   if (userError || !userData.user) {
     return res.status(401).json({ error: userError?.message || 'Invalid or expired recovery token' });
   }
 
-  // 2. Use Admin API to update the user's password directly (requires SERVICE_ROLE_KEY)
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceKey) return res.status(500).json({ error: 'Server misconfiguration: missing service role key' });
-  
-  const { createClient } = require('@supabase/supabase-js');
-  const adminSupabase = createClient(process.env.SUPABASE_URL, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false }
-  });
-
-  const { error } = await adminSupabase.auth.admin.updateUserById(userData.user.id, {
+  // 2. Use Admin API to update the user's password directly (bypassing local session check)
+  const { error } = await supabase.auth.admin.updateUserById(userData.user.id, {
     password: newPassword
   });
 
   if (error) return res.status(error.status || 500).json({ error: error.message });
 
-  return res.json({ ok: true, message: 'Password updated successfully via Supabase' });
+  return res.json({ ok: true, message: 'Password updated successfully' });
 });
 
 // GET /api/auth/me
