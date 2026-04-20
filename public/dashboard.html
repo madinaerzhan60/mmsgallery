@@ -628,6 +628,7 @@ function openEditWorkModal(uuid) {
   editingWorkUuid = uuid;
   document.getElementById('editWorkTitle').value = work.title || '';
   document.getElementById('editWorkCategory').value = normalizeCategoryValue(work.category || '') || 'Other';
+  document.getElementById('editWorkCourse').value = work.course || '';
   document.getElementById('editWorkDescription').value = work.description || '';
   document.getElementById('editWorkTags').value = work.tags || '';
   document.getElementById('editWorkModal').classList.add('open');
@@ -642,6 +643,7 @@ async function saveWorkEdits() {
   if (!editingWorkUuid) return;
   const title = document.getElementById('editWorkTitle').value.trim();
   const category = normalizeCategoryValue(document.getElementById('editWorkCategory').value.trim());
+  const course = document.getElementById('editWorkCourse').value;
   const description = document.getElementById('editWorkDescription').value.trim();
   const tags = document.getElementById('editWorkTags').value.trim();
 
@@ -653,7 +655,7 @@ async function saveWorkEdits() {
   try {
     await apiFetch('/api/artworks/' + editingWorkUuid, {
       method: 'PUT',
-      body: JSON.stringify({ title, category, description, tags })
+      body: JSON.stringify({ title, category, course: course || null, description, tags })
     });
     toast('Artwork updated', 'success');
     closeEditWorkModal();
@@ -960,6 +962,14 @@ window.addEventListener('mms:user-updated', (event) => {
           <option value="Video">Video</option>
           <option value="Interactive">Interactive</option>
           <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="courseLabel">Course</label>
+        <select id="editWorkCourse" class="form-select">
+          <option value="">No Course / Other</option>
+          <option value="UI/UX Design" data-i18n="course_uiux">UI/UX Design</option>
+          <option value="DFM" data-i18n="course_dfm">Design for Manufacture (DFM)</option>
         </select>
       </div>
       <div class="form-group">

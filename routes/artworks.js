@@ -439,7 +439,7 @@ router.put('/:uuid', auth, upload.fields([{ name: 'image', maxCount: 1 }]), asyn
   if (a.user_id !== req.user.id && req.user.role !== 'admin')
     return res.status(403).json({ error: 'Forbidden' });
 
-  const { title, description, category, tags, status, featured } = req.body;
+  const { title, description, category, course, tags, status, featured } = req.body;
   const image_url = req.files?.image
     ? (isVercel
       ? await uploadToStorage(req.files.image[0], 'images')
@@ -449,16 +449,17 @@ router.put('/:uuid', auth, upload.fields([{ name: 'image', maxCount: 1 }]), asyn
   if (usePg) {
     await pgPool.query(
       `UPDATE artworks
-       SET title=$1, description=$2, category=$3, tags=$4, image_url=$5,
-           thumbnail_url=COALESCE($6, thumbnail_url),
-           status=COALESCE($7, status),
-           featured=COALESCE($8, featured)
-       WHERE uuid=$9`,
+       SET title=$1, description=$2, category=$3, course=$4, tags=$5, image_url=$6,
+           thumbnail_url=COALESCE($7, thumbnail_url),
+           status=COALESCE($8, status),
+           featured=COALESCE($9, featured)
+       WHERE uuid=$10`,
       [
         title || a.title,
-        description || a.description,
+        description || (description === "" ? "" : a.description),
         category || a.category,
-        tags || a.tags,
+        course !== undefined ? course : a.course,
+        tags !== undefined ? tags : a.tags,
         image_url,
         image_url,
         status || null,
@@ -470,9 +471,9 @@ router.put('/:uuid', auth, upload.fields([{ name: 'image', maxCount: 1 }]), asyn
     return res.json(await withStatsPg(updated.rows[0]));
   }
 
-  db.prepare(`UPDATE artworks SET title=?,description=?,category=?,tags=?,image_url=?,
+  db.prepare(`UPDATE artworks SET title=?,description=?,category=?,course=?,tags=?,image_url=?,
     thumbnail_url=COALESCE(?, thumbnail_url), status=COALESCE(?,status), featured=COALESCE(?,featured) WHERE uuid=?`)
-    .run(title||a.title, description||a.description, category||a.category, tags||a.tags,
+    .run(title||a.title, description||a.description, category||a.category, course!==undefined?course:a.course, tags!==undefined?tags:a.tags,
       image_url, image_url, status||null, featured!=null?Number(featured):null, req.params.uuid);
 
   res.json(withStats(db.prepare('SELECT * FROM artworks WHERE uuid=?').get(req.params.uuid)));
