@@ -142,26 +142,29 @@
 }
 .chip-filter {
   appearance: none;
-  border: 1px solid var(--border-color);
-  background: rgba(255, 255, 255, 0.6);
-  color: var(--text-secondary);
-  padding: 10px 16px;
+  border: none;
+  background: #E5E7EB;
+  color: #6B7280;
+  padding: 8px 20px;
   border-radius: 9999px;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
   white-space: nowrap;
   flex: 0 0 auto;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
-.chip-filter:hover {
-  border-color: color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
-  background: rgba(37, 99, 235, 0.04);
-  color: var(--text-primary);
+[data-theme="dark"] .chip-filter {
+  background: #374151;
+  color: #9CA3AF;
 }
-.chip-filter.active {
-  background: var(--accent-primary);
-  border-color: var(--accent-primary);
-  color: #fff;
-  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.18);
+.chip-filter:hover, .chip-filter.active {
+  background: #2563EB;
+  color: #FFFFFF;
+}
+[data-theme="dark"] .chip-filter:hover, [data-theme="dark"] .chip-filter.active {
+  background: #3B82F6;
+  color: #FFFFFF;
 }
 .filters-chip-row {
   display: flex;
@@ -256,6 +259,8 @@
   backdrop-filter: blur(8px);
   z-index: 1;
 }
+
+
 
 .load-more { text-align: center; margin-top: 40px; }
 .empty-state { text-align: center; padding: 80px 40px; color: var(--text-muted); }
@@ -551,6 +556,8 @@ const CATS = [
   { value: 'Photography', label: 'Photography' },
   { value: 'VFX', label: 'VFX' },
   { value: 'UX/UI', label: 'UX/UI' },
+  { value: 'UI/UX Design', label: 'cat_ux_ui_design' },
+  { value: 'DFM', label: 'cat_dfm' },
   { value: 'Game Art', label: 'Game Art' },
   { value: 'Illustration', label: 'Illustration' },
   { value: 'Video', label: 'Video' },
@@ -582,6 +589,11 @@ function normalizeCategory(value) {
     animation: 'animation',
     vfx: 'vfx',
     'ux/ui': 'ux/ui',
+    'ui/ux design': 'ui/ux design',
+    'ui/ux': 'ui/ux design',
+    dfm: 'dfm',
+    'design for manufacture': 'dfm',
+    'design for manufacture (dfm)': 'dfm',
     'game art': 'game art',
     illustration: 'illustration',
     video: 'video',
@@ -724,7 +736,15 @@ async function fetchWorks() {
       const item = document.createElement('div');
       item.className = 'reveal m-item';
       item.innerHTML = renderArtworkTileMedia(w, i + (page - 1) * 16);
+      // Course tag for UI/UX Design and DFM
+      const courseTag = (() => {
+        const cat = (w.category || '').toLowerCase();
+        if (cat === 'ui/ux design' || cat === 'ui/ux') return `<span class="m-course-tag uiux">${t('course_uiux')}</span>`;
+        if (cat === 'dfm' || cat.includes('manufacture')) return `<span class="m-course-tag dfm">${t('course_dfm')}</span>`;
+        return '';
+      })();
       item.innerHTML += `
+        ${courseTag}
         <div class="m-info"><div class="m-name">${w.title}</div><div class="m-author">${w.author?.name || ''}</div></div>
         <div class="m-likes">${w.likes || 0} ${t('likes')}</div>`;
       item.addEventListener('click', () => openLb(w, globalIndex));

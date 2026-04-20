@@ -11,6 +11,8 @@
   "cat_interactive": "Интерактив",
   "cat_vfx": "Визуалды эффектілер",
   "cat_ux_ui": "UX/UI",
+  "cat_ux_ui_design": "UI/UX дизайн",
+  "cat_dfm": "Өндіріс технологиясын дизайны (DFM)",
   "cat_game_art": "Ойын өнері",
   "cat_animation": "Анимация",
   "cat_illustration": "Иллюстрация",
@@ -66,5 +68,10 @@
   "hire": "Маман іздеу",
   "availableTalentTitle": "Қолжетімді таланттар",
   "availableTalent": "Ынтымақтастыққа, тағылымдамаға және жобалық жұмысқа қолжетімді студенттерді қараңыз.",
-  "contact": "Байланыс"
+  "contact": "Байланыс",
+  "courseLabel": "Курс *",
+  "selectCourseOption": "Курсты таңдаңыз",
+  "course_uiux": "UI/UX дизайн",
+  "course_dfm": "Өндіріс технологиясын дизайн (DFM)",
+  "course_other": "Басқа / Жалпы"
 }

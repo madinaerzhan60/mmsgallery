@@ -11,6 +11,8 @@
   "cat_interactive": "Интерактив",
   "cat_vfx": "Визуальные эффекты",
   "cat_ux_ui": "UX/UI",
+  "cat_ux_ui_design": "Дизайн UI/UX",
+  "cat_dfm": "Дизайн для производства (DFM)",
   "cat_game_art": "Игровой арт",
   "cat_animation": "Анимация",
   "cat_illustration": "Иллюстрация",
@@ -66,5 +68,10 @@
   "hire": "Найти специалиста",
   "availableTalentTitle": "Доступные таланты",
   "availableTalent": "Просматривайте студентов, доступных для сотрудничества, стажировок и проектной работы.",
-  "contact": "Обратная связь"
+  "contact": "Обратная связь",
+  "courseLabel": "Курс *",
+  "selectCourseOption": "Выберите курс",
+  "course_uiux": "Дизайн UI/UX",
+  "course_dfm": "Дизайн для производства (DFM)",
+  "course_other": "Другое / Общее"
 }

@@ -5,7 +5,7 @@
 
 :root {
   --font-body: 'Inter', sans-serif;
-  --font-heading: 'Playfair Display', serif;
+  --font-heading: 'Inter', sans-serif;
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -599,24 +599,54 @@ textarea {
 /* Filters */
 .filters { display: flex; gap: 8px; flex-wrap: wrap; }
 .flt {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  background: #E5E7EB; /* Light grey */
+  border: none;
+  color: #6B7280;
+  padding: 8px 20px;
+  border-radius: 9999px; /* Pill shape */
+  font-size: 0.85rem;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 [data-theme="dark"] .flt {
-  border-color: var(--border-light-strong);
-  color: var(--text-muted-light);
+  background: #374151; /* Dark grey */
+  color: #9CA3AF;
 }
 .flt.active, .flt:hover { 
-  border-color: var(--accent-primary); 
-  color: var(--accent-primary); 
-  background: var(--accent-light); 
+  background: #2563EB; /* Blue */
+  color: #FFFFFF; 
+}
+[data-theme="dark"] .flt.active, [data-theme="dark"] .flt:hover {
+  background: #3B82F6; /* Lighter blue for dark theme */
+  color: #FFFFFF;
+}
+
+/* Course tag pill badge on gallery cards */
+.m-course-tag {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+  z-index: 2;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.m-course-tag.uiux {
+  background: rgba(37, 99, 235, 0.85);
+  color: #fff;
+  border: 1px solid rgba(99,155,255,0.4);
+}
+.m-course-tag.dfm {
+  background: rgba(5, 150, 105, 0.85);
+  color: #fff;
+  border: 1px solid rgba(52,211,153,0.4);
 }
 
 /* Footer */

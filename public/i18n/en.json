@@ -11,6 +11,8 @@
   "cat_interactive": "Interactive",
   "cat_vfx": "VFX",
   "cat_ux_ui": "UX/UI",
+  "cat_ux_ui_design": "UI/UX Design",
+  "cat_dfm": "Design for Manufacture (DFM)",
   "cat_game_art": "Game Art",
   "cat_animation": "Animation",
   "cat_illustration": "Illustration",
@@ -66,5 +68,10 @@
   "hire": "Hire",
   "availableTalentTitle": "Available Talent",
   "availableTalent": "Browse students who are available for collaboration, internships, and project-based work.",
-  "contact": "Contact"
+  "contact": "Contact",
+  "courseLabel": "Course *",
+  "selectCourseOption": "Select a course",
+  "course_uiux": "UI/UX Design",
+  "course_dfm": "Design for Manufacture (DFM)",
+  "course_other": "Other / General"
 }

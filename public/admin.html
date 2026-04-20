@@ -463,6 +463,7 @@
           <table class="admin-table">
             <thead><tr>
               <th data-i18n="image">Image</th><th data-i18n="title">Title</th><th data-i18n="artist">Artist</th><th data-i18n="categoryLabel">Category</th>
+              <th data-i18n="courseLabel">Course</th>
               <th data-i18n="statusLabel">Status</th><th data-i18n="likesLabel">Likes</th><th data-i18n="dateLabel">Date</th><th data-i18n="actionsLabel">Actions</th>
             </tr></thead>
             <tbody id="artworksBody"></tbody>
@@ -559,6 +560,10 @@
           <div class="modal-detail-value" id="modalStatus">--</div>
         </div>
         <div class="modal-detail-item">
+          <span class="modal-detail-label">Course</span>
+          <div class="modal-detail-value" id="modalCourse">--</div>
+        </div>
+        <div class="modal-detail-item">
           <span class="modal-detail-label">Likes</span>
           <div class="modal-detail-value" id="modalLikes">0</div>
         </div>
@@ -653,6 +658,7 @@ function renderArtworks(data) {
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span class="artwork-title-link" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">${a.title}</span></td>
       <td style="color:var(--text-muted)">${a.author_name || '--'}</td>
       <td><span class="badge badge-gray">${a.category}</span></td>
+      <td style="font-size:0.8rem;color:var(--text-muted)">${a.course || '--'}</td>
       <td><span class="badge ${a.status === 'approved' ? 'badge-green' : a.status === 'rejected' ? 'badge-red' : 'badge-yellow'}">${t(a.status) || a.status}</span></td>
       <td style="color:var(--accent-primary)">${a.likes || 0}</td>
       <td style="color:var(--text-muted);font-size:0.85rem">${new Date(a.created_at).toLocaleDateString()}</td>
@@ -793,6 +799,7 @@ function handleOpenModal(artwork) {
   // Fill modal content
   document.getElementById('modalTitle').textContent = artwork.title || 'Artwork';
   document.getElementById('modalCategory').textContent = artwork.category || '--';
+  document.getElementById('modalCourse').textContent = artwork.course || '--';
   document.getElementById('modalStatus').innerHTML = `<span class="badge ${artwork.status === 'approved' ? 'badge-green' : artwork.status === 'rejected' ? 'badge-red' : 'badge-yellow'}">${artwork.status}</span>`;
   document.getElementById('modalLikes').textContent = artwork.likes || 0;
   document.getElementById('modalDescription').textContent = artwork.description || 'No description provided.';

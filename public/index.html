@@ -747,7 +747,22 @@
 
 <script src="/js/app.js?v=3"></script>
 <script>
-const CATS = ['all','Digital Art','3D','Animation','Photography','VFX','UX/UI','Game Art','Illustration','Video','Interactive','Other'];
+const CATS = [
+  { value: 'all', label: 'all' },
+  { value: 'Digital Art', label: 'Digital Art' },
+  { value: '3D', label: '3D' },
+  { value: 'Animation', label: 'Animation' },
+  { value: 'Photography', label: 'Photography' },
+  { value: 'VFX', label: 'VFX' },
+  { value: 'UX/UI', label: 'UX/UI' },
+  { value: 'UI/UX Design', label: 'cat_ux_ui_design' },
+  { value: 'DFM', label: 'cat_dfm' },
+  { value: 'Game Art', label: 'Game Art' },
+  { value: 'Illustration', label: 'Illustration' },
+  { value: 'Video', label: 'Video' },
+  { value: 'Interactive', label: 'Interactive' },
+  { value: 'Other', label: 'Other' }
+];
 let currentArtwork = null;
 let currentIndex = -1;
 let allArtistsData = [];
@@ -818,7 +833,13 @@ function renderMasonry(arts) {
       : (a.image_url
         ? `<img src="${a.image_url}" style="width:100%;display:block;max-height:280px;object-fit:cover">`
         : artSVG(a.id, 300, hs[i % hs.length]));
-    item.innerHTML = `${imgHtml}
+    const courseTag = (() => {
+      const cat = (a.category || '').toLowerCase();
+      if (cat === 'ui/ux design' || cat === 'ui/ux') return `<span class="m-course-tag uiux">${t('course_uiux')}</span>`;
+      if (cat === 'dfm' || cat.includes('manufacture')) return `<span class="m-course-tag dfm">${t('course_dfm')}</span>`;
+      return '';
+    })();
+    item.innerHTML = `${courseTag}${imgHtml}
       <div class="m-info">
         <div class="m-name">${a.title}</div>
         <div class="m-author">${a.author?.name || ''} - ${a.category}</div>
@@ -843,12 +864,12 @@ function buildFilters() {
   const container = document.getElementById('galleryFilters');
   CATS.forEach(c => {
     const btn = document.createElement('button');
-    btn.className = 'flt' + (c === 'all' ? ' active' : '');
-    btn.textContent = c === 'all' ? t('allWorks') : t(c);
+    btn.className = 'flt' + (c.value === 'all' ? ' active' : '');
+    btn.textContent = (c.value === 'all') ? t('allWorks') : t(c.label);
     btn.onclick = () => {
       container.querySelectorAll('.flt').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      loadGallery(c);
+      loadGallery(c.value);
     };
     container.appendChild(btn);
   });

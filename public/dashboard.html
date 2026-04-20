@@ -398,11 +398,22 @@
                 <option value="Photography" data-i18n="cat_photography">Photography</option>
                 <option value="VFX">VFX</option>
                 <option value="UX/UI">UX/UI</option>
+                <option value="UI/UX Design" data-i18n="cat_ux_ui_design">UI/UX Design</option>
+                <option value="DFM" data-i18n="cat_dfm">Design for Manufacture (DFM)</option>
                 <option value="Game Art">Game Art</option>
                 <option value="Illustration" data-i18n="cat_illustration">Illustration</option>
                 <option value="Video" data-i18n="cat_video_film">Video</option>
                 <option value="Interactive" data-i18n="cat_interactive_media">Interactive</option>
                 <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="courseLabel">Course *</label>
+              <select class="form-select" id="workCourse2">
+                <option value="" data-i18n="selectCourseOption">Select a course</option>
+                <option value="UI/UX Design" data-i18n="course_uiux">UI/UX Design</option>
+                <option value="DFM" data-i18n="course_dfm">Design for Manufacture (DFM)</option>
+                <option value="Other" data-i18n="course_other">Other / General</option>
               </select>
             </div>
             <div class="form-group">
@@ -500,6 +511,11 @@ function normalizeCategoryValue(value) {
     animation: 'Animation',
     vfx: 'VFX',
     'ux/ui': 'UX/UI',
+    'ui/ux design': 'UI/UX Design',
+    'ui/ux': 'UI/UX Design',
+    dfm: 'DFM',
+    'design for manufacture': 'DFM',
+    'design for manufacture (dfm)': 'DFM',
     'game art': 'Game Art',
     illustration: 'Illustration',
     video: 'Video',
@@ -726,6 +742,7 @@ async function uploadSelectedFileDirect(file) {
 async function submitWork2() {
   const title = document.getElementById('workTitle2').value.trim();
   const category = normalizeCategoryValue(document.getElementById('workCat2').value);
+  const course = document.getElementById('workCourse2').value;
   const description = document.getElementById('workDesc2').value.trim();
   const tags = document.getElementById('workTags2').value.trim();
   const errorEl = document.getElementById('submitError');
@@ -733,8 +750,8 @@ async function submitWork2() {
   const initialBtnLabel = submitBtn ? submitBtn.textContent : '';
   errorEl.style.display = 'none';
 
-  if (!title || !category) { 
-    errorEl.textContent = t('titleAndCategoryRequired'); 
+  if (!title || !category || !course) { 
+    errorEl.textContent = !course ? t('selectCourseOption') : t('titleAndCategoryRequired'); 
     errorEl.style.display = 'block'; 
     return; 
   }
@@ -757,6 +774,7 @@ async function submitWork2() {
     const payload = {
       title,
       category,
+      course: course || undefined,
       description,
       tags,
       file_type: uploaded.kind
@@ -935,6 +953,8 @@ window.addEventListener('mms:user-updated', (event) => {
           <option value="Photography">Photography</option>
           <option value="VFX">VFX</option>
           <option value="UX/UI">UX/UI</option>
+          <option value="UI/UX Design" data-i18n="cat_ux_ui_design">UI/UX Design</option>
+          <option value="DFM" data-i18n="cat_dfm">Design for Manufacture (DFM)</option>
           <option value="Game Art">Game Art</option>
           <option value="Illustration">Illustration</option>
           <option value="Video">Video</option>

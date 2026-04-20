@@ -169,7 +169,9 @@ function matchesArtworkFilters(row, { category, search, featured }) {
   if (featured && Number(row.featured || 0) !== 1) return false;
   if (category && category !== 'all') {
     const normalizedCategory = String(row.category || '').trim().toLowerCase();
-    if (normalizedCategory !== String(category).trim().toLowerCase()) return false;
+    const normalizedCourse = String(row.course || '').trim().toLowerCase();
+    const target = String(category).trim().toLowerCase();
+    if (normalizedCategory !== target && normalizedCourse !== target) return false;
   }
   if (search) {
     const query = String(search).trim().toLowerCase();
@@ -217,7 +219,8 @@ router.get('/', async (req, res) => {
       let idx = 1;
       let query = `SELECT a.* FROM artworks a WHERE a.status='approved'`;
       if (category && category !== 'all') {
-        query += ` AND LOWER(a.category)=LOWER($${idx++})`;
+        query += ` AND (LOWER(a.category)=LOWER($${idx}) OR LOWER(a.course)=LOWER($${idx}))`;
+        idx++;
         params.push(category);
       }
       if (featured) query += ' AND a.featured=1';
@@ -245,7 +248,10 @@ router.get('/', async (req, res) => {
 
   let query = `SELECT a.* FROM artworks a WHERE a.status='approved'`;
   const params = [];
-  if (category && category !== 'all') { query += ` AND LOWER(a.category)=LOWER(?)`; params.push(category); }
+  if (category && category !== 'all') { 
+    query += ` AND (LOWER(a.category)=LOWER(?) OR LOWER(a.course)=LOWER(?))`; 
+    params.push(category, category); 
+  }
   if (featured) { query += ` AND a.featured=1`; }
   if (search) { query += ` AND (a.title LIKE ? OR a.description LIKE ?)`; params.push(`%${search}%`, `%${search}%`); }
   query += ` ORDER BY a.created_at DESC LIMIT ? OFFSET ?`;
@@ -334,7 +340,7 @@ router.get('/:uuid', (req, res) => {
 // POST /api/artworks  (auth)
 router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'file', maxCount: 1 }]), async (req, res) => {
   try {
-    const { title, description, category, tags } = req.body;
+    const { title, description, category, course, tags } = req.body;
     if (!title || !category) return res.status(400).json({ error: 'Title and category required' });
 
     const directImageUrl = String(req.body.image_url || '').trim() || null;
@@ -364,13 +370,14 @@ router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'f
 
     const insertSqliteArtwork = () => {
       db.prepare(`
-        INSERT INTO artworks (uuid, title, description, category, tags, image_url, file_url, thumbnail_url, file_type, status, user_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+        INSERT INTO artworks (uuid, title, description, category, course, tags, image_url, file_url, thumbnail_url, file_type, status, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
       `).run(
         uuid,
         title,
         description || '',
         category,
+        course || null,
         tags || '',
         image_url,
         file_url,
@@ -391,13 +398,14 @@ router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'f
 
       try {
         await pgPool.query(
-          `INSERT INTO artworks (uuid, title, description, category, tags, image_url, file_url, thumbnail_url, file_type, status, user_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10)`,
+          `INSERT INTO artworks (uuid, title, description, category, course, tags, image_url, file_url, thumbnail_url, file_type, status, user_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending',$11)`,
           [
             uuid,
             title,
             description || '',
             category,
+            course || null,
             tags || '',
             image_url,
             file_url,
