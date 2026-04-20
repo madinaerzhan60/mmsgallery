@@ -234,7 +234,9 @@ router.get('/', async (req, res) => {
       const localRows = sqliteRows
         .map(withStats)
         .filter((row) => matchesArtworkFilters(row, { category, search, featured }));
-      return res.json(mergeArtworkRows(pgRows, localRows));
+      const merged = mergeArtworkRows(pgRows, localRows);
+      const offset = (Number(page) - 1) * Number(limit);
+      return res.json(merged.slice(offset, offset + Number(limit)));
     } catch (error) {
       const fallbackRows = db.prepare(query.replace(/\$\d+/g, '?')).all(...params).map(withStats);
       return res.json(fallbackRows);
