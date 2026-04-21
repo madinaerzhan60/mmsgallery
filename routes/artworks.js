@@ -376,10 +376,10 @@ router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'f
 
     const file = req.files?.file ? req.files.file[0] : {};
     const mimetype = file.mimetype || '';
-    let file_type = directFileType || (file_url ? 'video' : 'image');
+    let fileType = directFileType || (file_url ? 'video' : 'image');
     if (!directFileType) {
-      if (/^video\//.test(mimetype)) file_type = 'video';
-      else if (/^application\/pdf$/.test(mimetype)) file_type = 'pdf';
+      if (/^video\//.test(mimetype)) fileType = 'video';
+      else if (/^application\/pdf$/.test(mimetype)) fileType = 'pdf';
     }
     const uuid = uuidv4();
 
@@ -400,7 +400,6 @@ router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'f
         fileType,
         req.user.id
       );
-
       const artwork = db.prepare('SELECT * FROM artworks WHERE uuid=?').get(uuid);
       return res.status(201).json(withStats(artwork));
     };
