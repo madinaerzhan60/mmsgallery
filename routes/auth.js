@@ -411,6 +411,10 @@ router.post('/reset-password', async (req, res) => {
 
   if (error) return res.status(error.status || 500).json({ error: error.message });
 
+  // 3. Critically: Also update the local PG password hash so they stay in sync
+  const hashed = bcrypt.hashSync(newPassword, 10);
+  await pgPool.query('UPDATE users SET password=$1 WHERE uuid=$2', [hashed, userData.user.id]);
+
   return res.json({ ok: true, message: 'Password updated successfully' });
 });
 
@@ -501,6 +505,16 @@ router.post('/password', auth, async (req, res) => {
     return res.status(400).json({ error: 'Current password is incorrect' });
   }
 
+  // 1. Update in Supabase first (using the user's current token)
+  const { error: sbError } = await supabase.auth.admin.updateUserById(req.user.uuid, {
+    password: newPassword
+  });
+  
+  if (sbError) {
+    return res.status(sbError.status || 500).json({ error: 'Supabase: ' + sbError.message });
+  }
+
+  // 2. Update in local PG
   const nextHash = bcrypt.hashSync(newPassword, 10);
   await pgPool.query('UPDATE users SET password=$1 WHERE id=$2', [nextHash, req.user.id]);
   res.json({ ok: true });

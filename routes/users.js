@@ -274,6 +274,15 @@ router.patch('/password', auth, async (req, res) => {
       return res.status(400).json({ error: 'Current password is incorrect' });
     }
 
+    // 1. Update in Supabase Auth first
+    if (supabaseEnabled) {
+      const { error: sbError } = await supabase.auth.admin.updateUserById(req.user.uuid, {
+        password: new_password
+      });
+      if (sbError) return res.status(sbError.status || 500).json({ error: 'Supabase: ' + sbError.message });
+    }
+
+    // 2. Update in local PG
     const hash = bcrypt.hashSync(new_password, 10);
     await pgPool.query('UPDATE users SET password=$1 WHERE uuid=$2', [hash, req.user.uuid]);
     res.json({ ok: true });
@@ -303,6 +312,15 @@ router.patch('/email', auth, async (req, res) => {
     );
     if (duplicate.rows[0]) return res.status(409).json({ error: 'Email already in use' });
 
+    // 1. Update in Supabase Auth first
+    if (supabaseEnabled) {
+      const { error: sbError } = await supabase.auth.admin.updateUserById(req.user.uuid, {
+        email: String(new_email).trim()
+      });
+      if (sbError) return res.status(sbError.status || 500).json({ error: 'Supabase: ' + sbError.message });
+    }
+
+    // 2. Update in local PG
     await pgPool.query('UPDATE users SET email=$1 WHERE uuid=$2', [String(new_email).trim(), req.user.uuid]);
     const updated = await getCurrentUser(req);
     res.json({ user: safeUser(updated) });
