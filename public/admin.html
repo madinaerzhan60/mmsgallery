@@ -583,7 +583,10 @@ if (!isLoggedIn() || getUser()?.role !== 'admin') location.href = '/auth';
 let allArtworksData = [], allUsersData = [], currentStatus = 'all';
 
 function isPDFArtwork(a) {
-  return (a.file_type === 'pdf' || (a.file_url || '').toLowerCase().endsWith('.pdf'));
+  const type = (a.file_type || '').toLowerCase();
+  const fileUrl = (a.file_url || '').toLowerCase();
+  const imageUrl = (a.image_url || '').toLowerCase();
+  return type === 'pdf' || fileUrl.endsWith('.pdf') || imageUrl.endsWith('.pdf');
 }
 
 function showPanel(name) {

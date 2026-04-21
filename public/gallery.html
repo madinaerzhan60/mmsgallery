@@ -590,7 +590,8 @@ function isVideoArtwork(artwork) {
 function isPDFArtwork(artwork) {
   const type = (artwork.file_type || '').toLowerCase();
   const fileUrl = (artwork.file_url || '').toLowerCase();
-  return type === 'pdf' || fileUrl.endsWith('.pdf');
+  const imageUrl = (artwork.image_url || '').toLowerCase();
+  return type === 'pdf' || fileUrl.endsWith('.pdf') || imageUrl.endsWith('.pdf');
 }
 
 function normalizeCategory(value) {

@@ -421,9 +421,9 @@ router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'f
             category,
             course || null,
             tags || '',
-            image_url,
-            file_url,
-            image_url,
+            image_url || null,
+            file_url || null,
+            image_url || null,
             fileType,
             pgUserId
           ]

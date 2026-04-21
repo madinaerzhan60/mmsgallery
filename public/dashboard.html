@@ -521,6 +521,13 @@ function normalizeCategoryValue(value) {
 const urlTab = new URLSearchParams(location.search).get('tab');
 if (urlTab) showTab(urlTab);
 
+function isPDFArtwork(w) {
+  const type = (w.file_type || '').toLowerCase();
+  const fileUrl = (w.file_url || '').toLowerCase();
+  const imageUrl = (w.image_url || '').toLowerCase();
+  return type === 'pdf' || fileUrl.endsWith('.pdf') || imageUrl.endsWith('.pdf');
+}
+
 function showTab(name) {
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -590,7 +597,7 @@ function renderWorks(works, containerId) {
     card.className = 'work-card';
     const statusMap = { pending: 'badge-yellow', approved: 'badge-green', rejected: 'badge-red' };
     card.innerHTML = `
-      ${w.file_type === 'pdf' || (w.file_url || '').toLowerCase().endsWith('.pdf')
+      ${isPDFArtwork(w)
         ? `<div class="work-img" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-tertiary);gap:8px;">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
             <span style="font-size:0.7rem;font-weight:700;color:var(--text-secondary);">PDF</span>
@@ -679,7 +686,7 @@ function handleFile2(input) {
   }
   const isImage = f.type.startsWith('image/');
   const isVideo = f.type.startsWith('video/');
-  const isPDF = f.type === 'application/pdf';
+  const isPDF = f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf');
   if (!isImage && !isVideo && !isPDF) {
     toast('Please upload an image, video, or PDF file', 'error');
     input.value = '';
@@ -785,8 +792,11 @@ async function submitWork2() {
       tags,
       file_type: uploaded.kind
     };
-    if (uploaded.kind === 'video') payload.file_url = uploaded.publicUrl;
-    else payload.image_url = uploaded.publicUrl;
+    if (uploaded.kind === 'video' || uploaded.kind === 'pdf') {
+      payload.file_url = uploaded.publicUrl;
+    } else {
+      payload.image_url = uploaded.publicUrl;
+    }
 
     await apiFetch('/api/artworks', {
       method: 'POST',
