@@ -1475,10 +1475,7 @@ async function apiFetch(path, opts = {}) {
 async function apiFetchForm(path, formData, method = 'POST') {
   const token = getToken();
   const headers = {};
-  // Only add Bearer token if it's not already provided in headers
-  if (token && !headers['Authorization']) {
-    headers['Authorization'] = 'Bearer ' + token;
-  }
+  if (token) headers['Authorization'] = 'Bearer ' + token;
   const res = await fetch(API + path, { method, headers, body: formData });
   const text = await res.text();
   let data = {};
