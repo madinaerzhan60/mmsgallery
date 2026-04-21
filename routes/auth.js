@@ -391,6 +391,8 @@ router.post('/reset-password', async (req, res) => {
   }
 
   const header = req.headers.authorization || '';
+  console.log('[reset-password] Received Authorization header:', header);
+  
   if (!header.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing session token from recovery flow.' });
   }
@@ -401,6 +403,7 @@ router.post('/reset-password', async (req, res) => {
   // 1. Get the user from the token
   const { data: userData, error: userError } = await supabase.auth.getUser(tokenBytes);
   if (userError || !userData.user) {
+    console.error('[reset-password] Supabase getUser error:', userError);
     return res.status(401).json({ error: userError?.message || 'Invalid or expired recovery token' });
   }
 
