@@ -173,10 +173,18 @@
   padding-bottom: 4px;
   -webkit-overflow-scrolling: touch;
 }
-.filters-chip-row::-webkit-scrollbar { height: 6px; }
 .filters-chip-row::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.35);
   border-radius: 999px;
+}
+.filter-separator {
+  width: 1px;
+  height: 26px;
+  background: var(--border-color);
+  flex: 0 0 auto;
+  margin: 0 8px;
+  align-self: center;
+  opacity: 0.6;
 }
 
 @media (max-width: 780px) {
@@ -513,7 +521,7 @@
           </select>
         </div>
       </div>
-      <div class="filters-chip-row" id="catFilters"></div>
+      <div class="filters-chip-row" id="combinedFilters" style="margin-bottom: 24px; align-items: center;"></div>
     </div>
     <div class="masonry" id="grid"></div>
     <div class="load-more" id="loadMore" style="display:none">
@@ -549,23 +557,25 @@
 <script src="/js/app.js"></script>
 <script>
 const CATS = [
-  { value: 'all', label: 'all' },
-  { value: 'Digital Art', label: 'Digital Art' },
-  { value: '3D', label: '3D' },
-  { value: 'Animation', label: 'Animation' },
-  { value: 'Photography', label: 'Photography' },
-  { value: 'VFX', label: 'VFX' },
-  { value: 'UX/UI', label: 'UX/UI' },
-  { value: 'UI/UX Design', label: 'cat_ux_ui_design' },
-  { value: 'DFM', label: 'cat_dfm' },
-  { value: 'Game Art', label: 'Game Art' },
-  { value: 'Illustration', label: 'Illustration' },
-  { value: 'Video', label: 'Video' },
-  { value: 'Interactive', label: 'Interactive' },
-  { value: 'Other', label: 'Other' }
+  { value: 'all', label: 'allWorks' },
+  { value: '3D Model', label: 'cat_3d_model' },
+  { value: 'Prototype', label: 'cat_prototype' },
+  { value: 'Case Study', label: 'cat_case_study' },
+  { value: 'Motion/Animation', label: 'cat_motion_animation' },
+  { value: 'Photography', label: 'cat_photography' },
+  { value: 'Illustration', label: 'cat_illustration' },
+  { value: 'VFX', label: 'cat_vfx' },
+  { value: 'Game Art', label: 'cat_game_art' }
 ];
+
+const COURSES = [
+  { value: 'all', label: 'allWorks' },
+  { value: 'ui-ux-design', label: 'ui-ux-design' },
+  { value: 'dfm', label: 'dfm' }
+];
+
 const PAGE_SIZE = 1000;
-let page = 1, loading = false, hasMore = true, currentCat = 'all', currentSearch = '', currentSort = 'newest';
+let page = 1, loading = false, hasMore = true, currentCat = 'all', currentCourse = 'all', currentSearch = '', currentSort = 'newest';
 let lbArtwork = null;
 let allWorks = []; // Store all loaded works for navigation
 let currentIndex = 0; // Current artwork index in lightbox
@@ -581,26 +591,17 @@ function isVideoArtwork(artwork) {
 function normalizeCategory(value) {
   const key = String(value || '').trim().toLowerCase();
   const map = {
-    digital: 'digital art',
-    'digital art': 'digital art',
-    photography: 'photography',
-    '3d': '3d',
-    '3d and motion graphics': '3d',
-    animation: 'animation',
-    vfx: 'vfx',
-    'ux/ui': 'ux/ui',
-    'ui/ux design': 'ui/ux design',
-    'ui/ux': 'ui/ux design',
-    dfm: 'dfm',
-    'design for manufacture': 'dfm',
-    'design for manufacture (dfm)': 'dfm',
+    '3d model': '3d model',
+    'prototype': 'prototype',
+    'case study': 'case study',
+    'motion/animation': 'motion/animation',
+    'photography': 'photography',
+    'vfx': 'vfx',
     'game art': 'game art',
-    illustration: 'illustration',
-    video: 'video',
-    'video and film': 'video',
-    interactive: 'interactive',
-    'interactive media': 'interactive',
-    other: 'other'
+    'illustration': 'illustration',
+    'ui/ux design': 'ui-ux-design',
+    'dfm': 'dfm',
+    'ui-ux-design': 'ui-ux-design'
   };
   return map[key] || key;
 }
@@ -617,23 +618,57 @@ function renderArtworkTileMedia(artwork, fallbackSeed) {
   return artSVG(artwork.id, 300, HEIGHTS[fallbackSeed % HEIGHTS.length]);
 }
 
-// Filters
-const catFilter = document.getElementById('catFilters');
+// Combined Filters
+const combinedFilters = document.getElementById('combinedFilters');
+
+// Group 1: Courses
+COURSES.forEach(c => {
+  const btn = document.createElement('button');
+  btn.className = 'chip-filter' + (c.value === 'all' && currentCourse === 'all' ? ' active' : '');
+  btn.textContent = c.value === 'all' ? t('allWorks') : t(c.label);
+  btn.onclick = () => { 
+    currentCourse = c.value;
+    page = 1; 
+    hasMore = true; 
+    allWorks = [];
+    combinedFilters.querySelectorAll('.chip-filter').forEach(b => {
+      // Only deactivate buttons in this group if we wanted exclusive, but here they are independent.
+      // Wait, user says "filter by course" and "filter by content type".
+      // They should probably be independent.
+    });
+    // Find buttons that belong to courses
+    const courseBtns = Array.from(combinedFilters.children).slice(0, COURSES.length);
+    courseBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); 
+    document.getElementById('grid').innerHTML = ''; 
+    fetchWorks(); 
+  };
+  combinedFilters.appendChild(btn);
+});
+
+// Separator
+const separator = document.createElement('div');
+separator.className = 'filter-separator';
+combinedFilters.appendChild(separator);
+
+// Group 2: Work Types
 CATS.forEach(c => {
   const btn = document.createElement('button');
-  btn.className = 'chip-filter' + (c.value === 'all' ? ' active' : '');
+  btn.className = 'chip-filter' + (c.value === 'all' && currentCat === 'all' ? ' active' : '');
   btn.textContent = c.value === 'all' ? t('allWorks') : t(c.label);
   btn.onclick = () => { 
     currentCat = c.value;
     page = 1; 
     hasMore = true; 
     allWorks = [];
-    catFilter.querySelectorAll('.chip-filter').forEach(b => b.classList.remove('active')); 
+    // Find buttons that belong to categories (after separator)
+    const catBtns = Array.from(combinedFilters.children).slice(COURSES.length + 1);
+    catBtns.forEach(b => b.classList.remove('active'));
     btn.classList.add('active'); 
     document.getElementById('grid').innerHTML = ''; 
     fetchWorks(); 
   };
-  catFilter.appendChild(btn);
+  combinedFilters.appendChild(btn);
 });
 
 const feedFilters = document.getElementById('feedFilters');
@@ -705,7 +740,13 @@ async function fetchWorks() {
         works = works.filter((w) => (w.title || '').toLowerCase().includes(query) || (w.description || '').toLowerCase().includes(query));
       }
     } else {
-      const params = new URLSearchParams({ limit: PAGE_SIZE, page, ...(currentCat !== 'all' ? { category: currentCat } : {}), ...(currentSearch ? { search: currentSearch } : {}) });
+      const params = new URLSearchParams({ 
+        limit: PAGE_SIZE, 
+        page, 
+        ...(currentCat !== 'all' ? { category: currentCat } : {}), 
+        ...(currentCourse !== 'all' ? { course: currentCourse } : {}),
+        ...(currentSearch ? { search: currentSearch } : {}) 
+      });
       works = await apiFetch('/api/artworks?' + params);
     }
 

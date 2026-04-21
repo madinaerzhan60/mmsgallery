@@ -392,27 +392,22 @@
               <label class="form-label" data-i18n="categoryLabel">Category *</label>
               <select class="form-select" id="workCat2">
                 <option value="" data-i18n="selectCategoryOption">Select a category</option>
-                <option value="Digital Art" data-i18n="cat_digital_art">Digital Art</option>
-                <option value="3D">3D</option>
-                <option value="Animation">Animation</option>
+                <option value="3D Model" data-i18n="cat_3d_model">3D Model</option>
+                <option value="Prototype" data-i18n="cat_prototype">Prototype</option>
+                <option value="Case Study" data-i18n="cat_case_study">Case Study</option>
+                <option value="Motion/Animation" data-i18n="cat_motion_animation">Motion/Animation</option>
                 <option value="Photography" data-i18n="cat_photography">Photography</option>
-                <option value="VFX">VFX</option>
-                <option value="UX/UI">UX/UI</option>
-                <option value="UI/UX Design" data-i18n="cat_ux_ui_design">UI/UX Design</option>
-                <option value="DFM" data-i18n="cat_dfm">Design for Manufacture (DFM)</option>
-                <option value="Game Art">Game Art</option>
                 <option value="Illustration" data-i18n="cat_illustration">Illustration</option>
-                <option value="Video" data-i18n="cat_video_film">Video</option>
-                <option value="Interactive" data-i18n="cat_interactive_media">Interactive</option>
-                <option value="Other">Other</option>
+                <option value="VFX" data-i18n="cat_vfx">VFX</option>
+                <option value="Game Art" data-i18n="cat_game_art">Game Art</option>
               </select>
             </div>
             <div class="form-group">
               <label class="form-label" data-i18n="courseLabel">Course *</label>
               <select class="form-select" id="workCourse2">
                 <option value="" data-i18n="selectCourseOption">Select a course</option>
-                <option value="UI/UX Design" data-i18n="course_uiux">UI/UX Design</option>
-                <option value="DFM" data-i18n="course_dfm">Design for Manufacture (DFM)</option>
+                <option value="ui-ux-design" data-i18n="ui-ux-design">UI/UX Design</option>
+                <option value="dfm" data-i18n="dfm">Design for Manufacture (DFM)</option>
                 <option value="Other" data-i18n="course_other">Other / General</option>
               </select>
             </div>
@@ -503,26 +498,17 @@ let editingWorkUuid = null;
 function normalizeCategoryValue(value) {
   const key = String(value || '').trim().toLowerCase();
   const map = {
-    digital: 'Digital Art',
-    'digital art': 'Digital Art',
-    photography: 'Photography',
-    '3d': '3D',
-    '3d and motion graphics': '3D',
-    animation: 'Animation',
-    vfx: 'VFX',
-    'ux/ui': 'UX/UI',
-    'ui/ux design': 'UI/UX Design',
-    'ui/ux': 'UI/UX Design',
-    dfm: 'DFM',
-    'design for manufacture': 'DFM',
-    'design for manufacture (dfm)': 'DFM',
+    '3d model': '3d Model',
+    'prototype': 'Prototype',
+    'case study': 'Case Study',
+    'motion/animation': 'Motion/Animation',
+    'photography': 'Photography',
+    'vfx': 'VFX',
     'game art': 'Game Art',
-    illustration: 'Illustration',
-    video: 'Video',
-    'video and film': 'Video',
-    interactive: 'Interactive',
-    'interactive media': 'Interactive',
-    other: 'Other'
+    'illustration': 'Illustration',
+    'ui/ux design': 'ui-ux-design',
+    'dfm': 'dfm',
+    'ui-ux-design': 'ui-ux-design'
   };
   return map[key] || value;
 }

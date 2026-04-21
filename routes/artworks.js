@@ -164,14 +164,16 @@ function mergeArtworkRows(primaryRows, secondaryRows) {
   });
 }
 
-function matchesArtworkFilters(row, { category, search, featured }) {
+function matchesArtworkFilters(row, { category, course, search, featured }) {
   if (!row) return false;
   if (featured && Number(row.featured || 0) !== 1) return false;
   if (category && category !== 'all') {
     const normalizedCategory = String(row.category || '').trim().toLowerCase();
+    if (normalizedCategory !== String(category).trim().toLowerCase()) return false;
+  }
+  if (course && course !== 'all') {
     const normalizedCourse = String(row.course || '').trim().toLowerCase();
-    const target = String(category).trim().toLowerCase();
-    if (normalizedCategory !== target && normalizedCourse !== target) return false;
+    if (normalizedCourse !== String(course).trim().toLowerCase()) return false;
   }
   if (search) {
     const query = String(search).trim().toLowerCase();
@@ -211,7 +213,7 @@ async function resolvePgUserId(user) {
 
 // GET /api/artworks  (public, approved)
 router.get('/', async (req, res) => {
-  const { category, search, featured, page = 1, limit = 20 } = req.query;
+  const { category, course, search, featured, page = 1, limit = 20 } = req.query;
 
   if (usePg) {
     try {
@@ -219,9 +221,12 @@ router.get('/', async (req, res) => {
       let idx = 1;
       let query = `SELECT a.* FROM artworks a WHERE a.status='approved'`;
       if (category && category !== 'all') {
-        query += ` AND (LOWER(a.category)=LOWER($${idx}) OR LOWER(a.course)=LOWER($${idx}))`;
-        idx++;
+        query += ` AND LOWER(a.category)=LOWER($${idx++})`;
         params.push(category);
+      }
+      if (course && course !== 'all') {
+        query += ` AND LOWER(a.course)=LOWER($${idx++})`;
+        params.push(course);
       }
       if (featured) query += ' AND a.featured=1';
       if (search) {
@@ -236,7 +241,7 @@ router.get('/', async (req, res) => {
       const sqliteRows = db.prepare(`SELECT a.* FROM artworks a WHERE a.status='approved'`).all();
       const localRows = sqliteRows
         .map(withStats)
-        .filter((row) => matchesArtworkFilters(row, { category, search, featured }));
+        .filter((row) => matchesArtworkFilters(row, { category, course, search, featured }));
       const merged = mergeArtworkRows(pgRows, localRows);
       const offset = (Number(page) - 1) * Number(limit);
       return res.json(merged.slice(offset, offset + Number(limit)));
@@ -249,8 +254,12 @@ router.get('/', async (req, res) => {
   let query = `SELECT a.* FROM artworks a WHERE a.status='approved'`;
   const params = [];
   if (category && category !== 'all') { 
-    query += ` AND (LOWER(a.category)=LOWER(?) OR LOWER(a.course)=LOWER(?))`; 
-    params.push(category, category); 
+    query += ` AND LOWER(a.category)=LOWER(?)`; 
+    params.push(category); 
+  }
+  if (course && course !== 'all') {
+    query += ` AND LOWER(a.course)=LOWER(?)`;
+    params.push(course);
   }
   if (featured) { query += ` AND a.featured=1`; }
   if (search) { query += ` AND (a.title LIKE ? OR a.description LIKE ?)`; params.push(`%${search}%`, `%${search}%`); }

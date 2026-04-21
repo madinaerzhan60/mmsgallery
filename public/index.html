@@ -679,7 +679,7 @@
       </div>
       <a href="/gallery" class="btn btn-ghost btn-sm" data-i18n="view_all">View All</a>
     </div>
-    <div class="filters" id="galleryFilters"></div>
+    <div id="galleryFilters"></div>
     <div class="masonry" id="masonryGrid" style="margin-top:24px"></div>
   </section>
 
@@ -748,21 +748,24 @@
 <script src="/js/app.js?v=3"></script>
 <script>
 const CATS = [
-  { value: 'all', label: 'all' },
-  { value: 'Digital Art', label: 'Digital Art' },
-  { value: '3D', label: '3D' },
-  { value: 'Animation', label: 'Animation' },
-  { value: 'Photography', label: 'Photography' },
-  { value: 'VFX', label: 'VFX' },
-  { value: 'UX/UI', label: 'UX/UI' },
-  { value: 'UI/UX Design', label: 'cat_ux_ui_design' },
-  { value: 'DFM', label: 'cat_dfm' },
-  { value: 'Game Art', label: 'Game Art' },
-  { value: 'Illustration', label: 'Illustration' },
-  { value: 'Video', label: 'Video' },
-  { value: 'Interactive', label: 'Interactive' },
-  { value: 'Other', label: 'Other' }
+  { value: 'all', label: 'allWorks' },
+  { value: '3D Model', label: 'cat_3d_model' },
+  { value: 'Prototype', label: 'cat_prototype' },
+  { value: 'Case Study', label: 'cat_case_study' },
+  { value: 'Motion/Animation', label: 'cat_motion_animation' },
+  { value: 'Photography', label: 'cat_photography' },
+  { value: 'Illustration', label: 'cat_illustration' },
+  { value: 'VFX', label: 'cat_vfx' },
+  { value: 'Game Art', label: 'cat_game_art' }
 ];
+
+const COURSES = [
+  { value: 'all', label: 'allWorks' },
+  { value: 'ui-ux-design', label: 'ui-ux-design' },
+  { value: 'dfm', label: 'dfm' }
+];
+
+let currentCat = 'all', currentCourse = 'all';
 let currentArtwork = null;
 let currentIndex = -1;
 let allArtistsData = [];
@@ -808,12 +811,14 @@ function animateNum(id, target) {
 // Gallery
 let allArts = [];
 const HOME_PREVIEW_LIMIT = window.innerWidth <= 768 ? 4 : 8;
-async function loadGallery(cat = 'all') {
+async function loadGallery() {
   try {
-    const url = cat === 'all'
-      ? `/api/artworks?limit=${HOME_PREVIEW_LIMIT}`
-      : `/api/artworks?category=${cat}&limit=${HOME_PREVIEW_LIMIT}`;
-    allArts = await apiFetch(url);
+    const params = new URLSearchParams({ 
+      limit: HOME_PREVIEW_LIMIT,
+      ...(currentCat !== 'all' ? { category: currentCat } : {}),
+      ...(currentCourse !== 'all' ? { course: currentCourse } : {})
+    });
+    allArts = await apiFetch('/api/artworks?' + params);
     renderMasonry(allArts);
   } catch(e) { console.error(e); }
 }
@@ -862,14 +867,57 @@ function renderMasonry(arts) {
 }
 function buildFilters() {
   const container = document.getElementById('galleryFilters');
-  CATS.forEach(c => {
+  container.innerHTML = '';
+  container.className = 'filters combined-filters-row';
+  container.style.display = 'flex';
+  container.style.alignItems = 'center';
+  container.style.overflowX = 'auto';
+  container.style.gap = '10px';
+  container.style.paddingBottom = '10px';
+
+  // CSS for separator if not in file
+  if (!document.getElementById('divider-style')) {
+    const style = document.createElement('style');
+    style.id = 'divider-style';
+    style.textContent = `
+      .filter-divider { width: 1px; height: 24px; background: var(--border-color); flex-shrink: 0; margin: 0 8px; opacity: 0.6; }
+      .combined-filters-row::-webkit-scrollbar { height: 4px; }
+      .combined-filters-row::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Course Filters
+  COURSES.forEach(c => {
     const btn = document.createElement('button');
-    btn.className = 'flt' + (c.value === 'all' ? ' active' : '');
+    btn.className = 'flt' + (c.value === 'all' && currentCourse === 'all' ? ' active' : '');
     btn.textContent = (c.value === 'all') ? t('allWorks') : t(c.label);
     btn.onclick = () => {
-      container.querySelectorAll('.flt').forEach(b => b.classList.remove('active'));
+      currentCourse = c.value;
+      const courseBtns = Array.from(container.children).slice(0, COURSES.length);
+      courseBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      loadGallery(c.value);
+      loadGallery();
+    };
+    container.appendChild(btn);
+  });
+
+  // Divider
+  const divider = document.createElement('div');
+  divider.className = 'filter-divider';
+  container.appendChild(divider);
+
+  // Category Filters
+  CATS.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'flt' + (c.value === 'all' && currentCat === 'all' ? ' active' : '');
+    btn.textContent = (c.value === 'all') ? t('allWorks') : t(c.label);
+    btn.onclick = () => {
+      currentCat = c.value;
+      const catBtns = Array.from(container.children).slice(COURSES.length + 1);
+      catBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadGallery();
     };
     container.appendChild(btn);
   });
