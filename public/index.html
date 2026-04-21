@@ -769,6 +769,15 @@ let currentArtwork = null;
 let currentIndex = -1;
 let allArtistsData = [];
 
+function isPDFArtwork(artwork) {
+  const type = (artwork.file_type || '').toLowerCase();
+  const fileUrl = (artwork.file_url || '').toLowerCase();
+  const imageUrl = (artwork.image_url || '').toLowerCase();
+  const pdfRegex = /\.pdf(\?|$)/i;
+  const isDocPath = fileUrl.includes('/documents/') || imageUrl.includes('/documents/');
+  return type === 'pdf' || pdfRegex.test(fileUrl) || pdfRegex.test(imageUrl) || isDocPath;
+}
+
 function isVideoArtwork(artwork) {
   const type = (artwork.file_type || '').toLowerCase();
   const category = (artwork.category || '').toLowerCase();
@@ -832,11 +841,16 @@ function renderMasonry(arts) {
   arts.forEach((a, i) => {
     const item = document.createElement('div');
     item.className = 'reveal m-item';
-    const imgHtml = isVideoArtwork(a) && a.file_url
-      ? `<video src="${a.file_url}" poster="${a.thumbnail_url || a.image_url || ''}" muted loop playsinline preload="metadata" style="width:100%;display:block;max-height:280px;object-fit:cover"></video>`
-      : (a.image_url
-        ? `<img src="${a.image_url}" style="width:100%;display:block;max-height:280px;object-fit:cover">`
-        : artSVG(a.id, 300, hs[i % hs.length]));
+    const imgHtml = isPDFArtwork(a)
+      ? `<div style="width:100%;height:100%;position:relative;background:white;overflow:hidden;min-height:220px;">
+          <iframe src="${a.file_url || a.image_url}#toolbar=0&navpanes=0&scrollbar=0" style="width:150%;height:150%;border:none;pointer-events:none;position:absolute;top:-25%;left:-25%;"></iframe>
+          <div style="position:absolute;top:10px;right:10px;background:var(--accent-primary);color:white;padding:3px 8px;border-radius:4px;font-size:0.6rem;font-weight:800;box-shadow:0 2px 4px rgba(0,0,0,0.2)">PDF</div>
+         </div>`
+      : (isVideoArtwork(a) && a.file_url
+        ? `<video src="${a.file_url}" poster="${a.thumbnail_url || a.image_url || ''}" muted loop playsinline preload="metadata" style="width:100%;display:block;max-height:280px;object-fit:cover"></video>`
+        : (a.image_url
+          ? `<img src="${a.image_url}" style="width:100%;display:block;max-height:280px;object-fit:cover" onerror="this.onerror=null; this.src='https://placehold.co/400x300/2563eb/ffffff?text=Image+Not+Found'">`
+          : artSVG(a.id, 300, hs[i % hs.length])));
     const courseTag = (() => {
       const cat = (a.category || '').toLowerCase();
       if (cat === 'ui/ux design' || cat === 'ui/ux') return `<span class="m-course-tag uiux">${t('course_uiux')}</span>`;
@@ -939,7 +953,7 @@ async function loadArtists() {
       card.className = 'reveal artist-card';
       const avatarSrc = resolveAvatarUrl(a, 160);
       card.innerHTML = `
-        <div class="a-ring"><img class="a-img" src="${avatarSrc}" alt="${a.name || 'Artist'}"></div>
+        <div class="a-ring"><img class="a-img" src="${avatarSrc}" alt="${a.name || 'Artist'}" onerror="this.onerror=null; this.src='https://placehold.co/240x240/2563eb/ffffff?text=${encodeURIComponent((a.name||'A').charAt(0).toUpperCase())}'"></div>
         <div style="font-size:1.2rem;margin-bottom:6px">${['🥇','🥈','🥉'][i] || i + 1}</div>
         <div class="a-name">${a.name}</div>
         <div class="a-major">${t(a.profession || a.major || 'Multimedia Arts')}</div>
@@ -978,9 +992,17 @@ function openLb(a, idx) {
   const wrap = document.getElementById('lbImgWrap');
   if (isVideoArtwork(a) && a.file_url) {
     wrap.innerHTML = `<video src="${a.file_url}" poster="${a.thumbnail_url || a.image_url || ''}" controls autoplay playsinline preload="metadata" style="width:100%;height:100%;min-height:400px;object-fit:cover;background:#000"></video>`;
+  } else if (isPDFArtwork(a)) {
+    const url = a.file_url || a.image_url;
+    wrap.innerHTML = `
+      <div style="width:100%;height:100%;display:flex;flex-direction:column;gap:12px;padding:2px">
+        <iframe src="${url}#toolbar=0&navpanes=0&scrollbar=0" style="width:100%;flex:1;border:none;background:white;border-radius:12px;min-height:450px;"></iframe>
+        <a href="${url}" target="_blank" class="btn btn-primary" style="text-decoration:none;justify-content:center;">Open Full PDF</a>
+      </div>
+    `;
   } else {
     wrap.innerHTML = a.image_url
-      ? `<img src="${a.image_url}" style="width:100%;height:100%;min-height:400px;object-fit:cover;display:block">`
+      ? `<img src="${a.image_url}" style="width:100%;height:100%;min-height:400px;object-fit:cover;display:block" onerror="this.onerror=null; this.src='https://placehold.co/800x600/2563eb/ffffff?text=Image+Not+Found'">`
       : artSVG(a.id, 500, 500);
   }
   loadComments(a.uuid);
