@@ -460,8 +460,8 @@
         <div class="filter-bar">
           <input type="text" id="artSearch" placeholder="Search by title or author..." oninput="filterArtworks()">
           <div class="filters" id="artStatusFilters">
-            <button class="flt active" data-s="all" onclick="filterStatus('all')">All</button>
-            <button class="flt" data-s="pending" onclick="filterStatus('pending')">Pending</button>
+            <button class="flt" data-s="all" onclick="filterStatus('all')">All</button>
+            <button class="flt active" data-s="pending" onclick="filterStatus('pending')">Pending</button>
             <button class="flt" data-s="approved" onclick="filterStatus('approved')">Approved</button>
             <button class="flt" data-s="rejected" onclick="filterStatus('rejected')">Rejected</button>
           </div>
@@ -593,7 +593,7 @@
 <script>
 if (!isLoggedIn() || getUser()?.role !== 'admin') location.href = '/auth';
 
-let allArtworksData = [], allUsersData = [], currentStatus = 'all';
+let allArtworksData = [], allUsersData = [], currentStatus = 'pending';
 
 function isPDFArtwork(a) {
   const type = (a.file_type || '').toLowerCase();
@@ -651,7 +651,7 @@ async function loadStats() {
 async function loadArtworks() {
   try {
     allArtworksData = await apiFetch('/api/admin/artworks');
-    renderArtworks(allArtworksData);
+    filterArtworks();
   } catch(e) { console.error(e); }
 }
 
