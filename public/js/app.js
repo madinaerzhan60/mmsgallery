@@ -1468,6 +1468,16 @@ async function apiFetch(path, opts = {}) {
   const text = await res.text();
   let data = {};
   try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
+  
+  if (res.status === 401) {
+    // If we're not on the reset-password or auth pages, auto-logout on 401
+    if (!window.location.pathname.includes('/reset-password') && !window.location.pathname.includes('/auth')) {
+      console.warn('[apiFetch] Session expired (401). Clearing auth.');
+      clearAuth();
+      // Optional: window.location.reload(); or updateNavAuth();
+    }
+  }
+
   if (!res.ok) throw new Error(data.error || text || `Request failed (${res.status})`);
   return data;
 }
