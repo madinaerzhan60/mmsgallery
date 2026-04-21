@@ -748,7 +748,6 @@
 <script src="/js/app.js?v=3"></script>
 <script>
 const CATS = [
-  { value: 'all', label: 'allWorks' },
   { value: '3D Model', label: 'cat_3d_model' },
   { value: 'Prototype', label: 'cat_prototype' },
   { value: 'Case Study', label: 'cat_case_study' },
@@ -894,6 +893,11 @@ function buildFilters() {
     btn.textContent = (c.value === 'all') ? t('allWorks') : t(c.label);
     btn.onclick = () => {
       currentCourse = c.value;
+      if (c.value === 'all') {
+        currentCat = 'all';
+        const catBtns = Array.from(container.children).slice(COURSES.length + 1);
+        catBtns.forEach(b => b.classList.remove('active'));
+      }
       const courseBtns = Array.from(container.children).slice(0, COURSES.length);
       courseBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -910,8 +914,8 @@ function buildFilters() {
   // Category Filters
   CATS.forEach(c => {
     const btn = document.createElement('button');
-    btn.className = 'flt' + (c.value === 'all' && currentCat === 'all' ? ' active' : '');
-    btn.textContent = (c.value === 'all') ? t('allWorks') : t(c.label);
+    btn.className = 'flt' + (c.value === 'all' && currentCat === 'all' ? ' active' : ''); // fixed this in case it's used elsewhere
+    btn.textContent = t(c.label);
     btn.onclick = () => {
       currentCat = c.value;
       const catBtns = Array.from(container.children).slice(COURSES.length + 1);

@@ -557,7 +557,6 @@
 <script src="/js/app.js"></script>
 <script>
 const CATS = [
-  { value: 'all', label: 'allWorks' },
   { value: '3D Model', label: 'cat_3d_model' },
   { value: 'Prototype', label: 'cat_prototype' },
   { value: 'Case Study', label: 'cat_case_study' },
@@ -628,6 +627,12 @@ COURSES.forEach(c => {
   btn.textContent = c.value === 'all' ? t('allWorks') : t(c.label);
   btn.onclick = () => { 
     currentCourse = c.value;
+    if (c.value === 'all') {
+      currentCat = 'all';
+      // Reset category buttons as well
+      const catBtns = Array.from(combinedFilters.children).slice(COURSES.length + 1);
+      catBtns.forEach(b => b.classList.remove('active'));
+    }
     page = 1; 
     hasMore = true; 
     allWorks = [];
@@ -654,8 +659,8 @@ combinedFilters.appendChild(separator);
 // Group 2: Work Types
 CATS.forEach(c => {
   const btn = document.createElement('button');
-  btn.className = 'chip-filter' + (c.value === 'all' && currentCat === 'all' ? ' active' : '');
-  btn.textContent = c.value === 'all' ? t('allWorks') : t(c.label);
+  btn.className = 'chip-filter';
+  btn.textContent = t(c.label);
   btn.onclick = () => { 
     currentCat = c.value;
     page = 1; 
