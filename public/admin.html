@@ -122,8 +122,8 @@
 .admin-table tr:last-child td { border-bottom: none; }
 .admin-table tr:hover td { background: var(--bg-secondary); }
 .thumb { 
-  width: 50px; 
-  height: 40px; 
+  width: 100px; 
+  height: 75px; 
   border-radius: var(--radius-sm); 
   object-fit: cover; 
   border: 1px solid var(--border-color); 
@@ -664,13 +664,13 @@ function renderArtworks(data) {
       <td><div class="thumb" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">
         ${isPDFArtwork(a) 
           ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary)">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
              </div>`
           : (a.image_url 
             ? `<img src="${a.image_url}" style="width:100%;height:100%;object-fit:cover">` 
             : (a.file_type === 'video' && a.file_url 
               ? `<video src="${a.file_url}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;background:#000"></video>` 
-              : artSVG(a.id, 50, 40)))}
+              : artSVG(a.id, 100, 75)))}
       </div></td>
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span class="artwork-title-link" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">${a.title}</span></td>
       <td style="color:var(--text-muted)">${a.author_name || '--'}</td>
