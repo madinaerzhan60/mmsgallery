@@ -576,6 +576,10 @@
           <span class="modal-detail-label">Course</span>
           <div class="modal-detail-value" id="modalCourse">--</div>
         </div>
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Likes</span>
+          <div class="modal-detail-value" id="modalLikes">0</div>
+        </div>
       </div>
       <div class="modal-description">
         <label class="modal-description-label">Description</label>
@@ -669,9 +673,9 @@ function filterArtworks() {
 
 function renderArtworks(data) {
   const tbody = document.getElementById('artworksBody');
-  tbody.innerHTML = data.length ? data.map(a => `
+  tbody.innerHTML = data.length ? data.map((a, i) => `
     <tr>
-      <td><div class="thumb" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">
+      <td><div class="thumb" onclick="handleOpenByIndex(${i})">
         ${isPDFArtwork(a) 
           ? `<div style="width:100%;height:100%;position:relative;background:white;overflow:hidden;">
               <iframe src="${a.file_url || a.image_url}#toolbar=0&navpanes=0&scrollbar=0" style="width:200%;height:200%;border:none;pointer-events:none;position:absolute;top:-50%;left:-50%;"></iframe>
@@ -682,7 +686,7 @@ function renderArtworks(data) {
               ? `<video src="${a.file_url}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;background:#000"></video>` 
               : artSVG(a.id, 100, 75)))}
       </div></td>
-      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span class="artwork-title-link" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">${a.title}</span></td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span class="artwork-title-link" onclick="handleOpenByIndex(${i})">${a.title}</span></td>
       <td style="color:var(--text-muted)">${a.author_name || '--'}</td>
       <td><span class="badge badge-gray">${a.category}</span></td>
       <td style="font-size:0.8rem;color:var(--text-muted)">${a.course || '--'}</td>
@@ -693,7 +697,19 @@ function renderArtworks(data) {
         ${a.status !== 'approved' ? `<button class="btn btn-success btn-sm" onclick="setStatus(${a.id},'approved')">${t('approved')}</button>` : ''}
         ${a.status !== 'rejected' ? `<button class="btn btn-danger btn-sm" onclick="setStatus(${a.id},'rejected')">${t('rejected')}</button>` : ''}
       </div></td>
-    </tr>`).join('') : `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);font-style: normal">${t('noArtworksFound')}</td></tr>`;
+    </tr>`).join('') : `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);font-style: normal">${t('noArtworksFound')}</td></tr>`;
+}
+
+function handleOpenByIndex(index) {
+  // Get currently filtered list
+  const searchInput = document.getElementById('artSearch')?.value.toLowerCase() || '';
+  let filteredData = allArtworksData;
+  if (currentStatus !== 'all') filteredData = filteredData.filter(a => a.status === currentStatus);
+  if (searchInput) filteredData = filteredData.filter(a => a.title.toLowerCase().includes(searchInput) || a.author_name?.toLowerCase().includes(searchInput));
+  
+  if (filteredData[index]) {
+    handleOpenModal(filteredData[index], index, filteredData);
+  }
 }
 
 async function setStatus(id, status) {
@@ -805,23 +821,20 @@ let currentArtworkIndex = -1;
 let displayedArtworks = [];
 
 // Modal Functions
-function handleOpenModal(artwork) {
+function handleOpenModal(artwork, index, currentList) {
   selectedArtwork = artwork;
   isOpen = true;
   
-  // Find current index in displayed artworks
-  displayedArtworks = Array.from(document.querySelectorAll('#artworksBody tr')).map((row, idx) => {
-    const titleCell = row.querySelector('td:nth-child(2)');
-    return { id: artwork.id, el: row };
-  }).filter(a => a.id !== null);
+  // Use passed list or re-calculate
+  let filteredData = currentList;
+  if (!filteredData) {
+    const searchInput = document.getElementById('artSearch')?.value.toLowerCase() || '';
+    filteredData = allArtworksData;
+    if (currentStatus !== 'all') filteredData = filteredData.filter(a => a.status === currentStatus);
+    if (searchInput) filteredData = filteredData.filter(a => a.title.toLowerCase().includes(searchInput) || a.author_name?.toLowerCase().includes(searchInput));
+  }
   
-  // Get the filtered list of visible artworks
-  const searchInput = document.getElementById('artSearch')?.value.toLowerCase() || '';
-  let filteredData = allArtworksData;
-  if (currentStatus !== 'all') filteredData = filteredData.filter(a => a.status === currentStatus);
-  if (searchInput) filteredData = filteredData.filter(a => a.title.toLowerCase().includes(searchInput) || a.author_name?.toLowerCase().includes(searchInput));
-  
-  currentArtworkIndex = filteredData.findIndex(a => a.id === artwork.id);
+  currentArtworkIndex = index !== undefined ? index : filteredData.findIndex(a => a.id === artwork.id);
   
   // Fill modal content
   document.getElementById('modalTitle').textContent = artwork.title || 'Artwork';
