@@ -604,9 +604,9 @@ function renderWorks(works, containerId) {
     const statusMap = { pending: 'badge-yellow', approved: 'badge-green', rejected: 'badge-red' };
     card.innerHTML = `
       ${isPDFArtwork(w)
-        ? `<div class="work-img" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-tertiary);gap:8px;">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-            <span style="font-size:0.7rem;font-weight:700;color:var(--text-secondary);">PDF</span>
+        ? `<div class="work-img" style="position:relative;background:white;overflow:hidden;">
+            <iframe src="${w.file_url || w.image_url}#toolbar=0&navpanes=0&scrollbar=0" style="width:150%;height:150%;border:none;pointer-events:none;position:absolute;top:-25%;left:-25%;"></iframe>
+            <div style="position:absolute;top:5px;right:5px;background:var(--accent-primary);color:white;padding:2px 6px;border-radius:4px;font-size:0.55rem;font-weight:800;">PDF</div>
            </div>`
         : (w.image_url
           ? `<img class="work-img" src="${w.image_url}" alt="${w.title}">`

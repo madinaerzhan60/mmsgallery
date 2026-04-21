@@ -552,6 +552,12 @@
       <button class="modal-close-btn" onclick="handleCloseModal()">✕</button>
     </div>
     <div class="modal-body">
+      <div id="modalPdfAction" style="display:none;margin-bottom:20px;padding:12px;background:var(--accent-light);border:1px solid var(--accent-primary);border-radius:var(--radius-sm)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <span style="font-weight:700;color:var(--accent-primary)">PDF Document</span>
+          <a href="#" id="modalPdfLink" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none">View Full PDF in New Tab</a>
+        </div>
+      </div>
       <div class="modal-image-container" id="modalImageContainer"></div>
       <div class="modal-details">
         <div class="modal-detail-item">
@@ -569,12 +575,6 @@
         <div class="modal-detail-item">
           <span class="modal-detail-label">Course</span>
           <div class="modal-detail-value" id="modalCourse">--</div>
-        </div>
-        <div class="modal-detail-item" id="modalPdfAction" style="display:none;grid-column:1/-1;background:var(--accent-light);border:1px solid var(--accent-primary);">
-          <span class="modal-detail-label" style="color:var(--accent-primary)">Document</span>
-          <div class="modal-detail-value">
-            <a href="#" id="modalPdfLink" target="_blank" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:4px">View Full PDF in New Tab</a>
-          </div>
         </div>
       </div>
       <div class="modal-description">
@@ -673,8 +673,8 @@ function renderArtworks(data) {
     <tr>
       <td><div class="thumb" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">
         ${isPDFArtwork(a) 
-          ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary)">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          ? `<div style="width:100%;height:100%;position:relative;background:white;overflow:hidden;">
+              <iframe src="${a.file_url || a.image_url}#toolbar=0&navpanes=0&scrollbar=0" style="width:200%;height:200%;border:none;pointer-events:none;position:absolute;top:-50%;left:-50%;"></iframe>
              </div>`
           : (a.image_url 
             ? `<img src="${a.image_url}" style="width:100%;height:100%;object-fit:cover">` 
