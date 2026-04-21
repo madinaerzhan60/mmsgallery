@@ -531,7 +531,8 @@ function isPDFArtwork(w) {
   const type = (w.file_type || '').toLowerCase();
   const fileUrl = (w.file_url || '').toLowerCase();
   const imageUrl = (w.image_url || '').toLowerCase();
-  return type === 'pdf' || fileUrl.endsWith('.pdf') || imageUrl.endsWith('.pdf');
+  const pdfRegex = /\.pdf(\?|$)/i;
+  return type === 'pdf' || pdfRegex.test(fileUrl) || pdfRegex.test(imageUrl);
 }
 
 function showTab(name) {
