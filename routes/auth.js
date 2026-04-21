@@ -400,8 +400,8 @@ router.post('/reset-password', async (req, res) => {
 
   if (!supabase) return res.status(500).json({ error: 'Supabase Auth not configured' });
 
-  // 1. Get the user from the token
-  const { data: userData, error: userError } = await supabase.auth.getUser(tokenBytes);
+  // 1. Get the user from the token (using the anon client as it's a user-level token)
+  const { data: userData, error: userError } = await anonSupabase.auth.getUser(tokenBytes);
   if (userError || !userData.user) {
     console.error('[reset-password] Supabase getUser error:', userError);
     return res.status(401).json({ error: userError?.message || 'Invalid or expired recovery token' });

@@ -2,10 +2,11 @@ const { pgPool, usePg } = require('../pg');
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabaseEnabled = Boolean(supabaseUrl && supabaseAnonKey);
+// CRITICAL: We MUST prioritize SERVICE_ROLE_KEY on the server to perform admin actions (like password reset)
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+const supabaseEnabled = Boolean(supabaseUrl && supabaseKey);
 const supabase = supabaseEnabled 
-  ? createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false, autoRefreshToken: false } })
+  ? createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
 
 async function auth(req, res, next) {
