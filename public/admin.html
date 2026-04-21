@@ -856,7 +856,7 @@ function handleOpenModal(artwork) {
   } else if (isPDFArtwork(artwork)) {
     imageContainer.classList.add('is-pdf');
     const pdfUrl = artwork.file_url || artwork.image_url;
-    imageContainer.innerHTML = `<iframe src="${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0" style="width:100%;height:100%;border:none;background:white;pointer-events:none;"></iframe>`;
+    imageContainer.innerHTML = `<iframe src="${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0" style="width:100%;height:100%;border:none;background:white;"></iframe>`;
     pdfAction.style.display = 'block';
     pdfLink.href = pdfUrl;
   } else if (artwork.image_url) {

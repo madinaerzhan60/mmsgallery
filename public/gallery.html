@@ -869,7 +869,7 @@ function updateLbContent(a) {
     imgWrap.innerHTML = `<video class="lb-media" src="${a.file_url}" poster="${a.thumbnail_url || a.image_url || ''}" controls autoplay playsinline preload="metadata"></video>`;
   } else if (isPDFArtwork(a)) {
     const pdfUrl = a.file_url || a.image_url;
-    imgWrap.innerHTML = `<iframe src="${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0" class="lb-media" style="border:none; height:100%; width:100%; background:white; pointer-events:none;"></iframe>`;
+    imgWrap.innerHTML = `<iframe src="${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0" class="lb-media" style="border:none; height:100%; width:100%; background:white;"></iframe>`;
     pdfBtn.style.display = 'flex';
     pdfBtn.href = pdfUrl;
   } else {

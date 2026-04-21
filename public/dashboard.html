@@ -649,7 +649,7 @@ function openEditWorkModal(uuid) {
     preview.innerHTML = `<video src="${work.file_url}" controls style="width:100%;height:250px;background:#000;border-radius:var(--radius-sm)"></video>`;
   } else if (isPDFArtwork(work)) {
     const url = work.file_url || work.image_url;
-    preview.innerHTML = `<iframe src="${url}#toolbar=0&navpanes=0&scrollbar=0" style="width:100%;height:250px;border:none;background:white;pointer-events:none;border-radius:var(--radius-sm)"></iframe>`;
+    preview.innerHTML = `<iframe src="${url}#toolbar=0&navpanes=0&scrollbar=0" style="width:100%;height:250px;border:none;background:white;border-radius:var(--radius-sm)"></iframe>`;
     pdfBtn.style.display = 'flex';
     pdfBtn.href = url;
   } else if (work.image_url) {
