@@ -570,9 +570,11 @@
           <span class="modal-detail-label">Course</span>
           <div class="modal-detail-value" id="modalCourse">--</div>
         </div>
-        <div class="modal-detail-item">
-          <span class="modal-detail-label">Likes</span>
-          <div class="modal-detail-value" id="modalLikes">0</div>
+        <div class="modal-detail-item" id="modalPdfAction" style="display:none;grid-column:1/-1;background:var(--accent-light);border:1px solid var(--accent-primary);">
+          <span class="modal-detail-label" style="color:var(--accent-primary)">Document</span>
+          <div class="modal-detail-value">
+            <a href="#" id="modalPdfLink" target="_blank" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:4px">View Full PDF in New Tab</a>
+          </div>
         </div>
       </div>
       <div class="modal-description">
@@ -843,14 +845,20 @@ function handleOpenModal(artwork) {
   
   // Set image/video/pdf
   const imageContainer = document.getElementById('modalImageContainer');
+  const pdfAction = document.getElementById('modalPdfAction');
+  const pdfLink = document.getElementById('modalPdfLink');
+  
   imageContainer.classList.remove('is-pdf');
+  pdfAction.style.display = 'none';
   
   if (artwork.file_type === 'video' && artwork.file_url) {
     imageContainer.innerHTML = `<video src="${artwork.file_url}" poster="${artwork.thumbnail_url || artwork.image_url || ''}" controls autoplay playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;background:#000"></video>`;
   } else if (isPDFArtwork(artwork)) {
     imageContainer.classList.add('is-pdf');
     const pdfUrl = artwork.file_url || artwork.image_url;
-    imageContainer.innerHTML = `<iframe src="${pdfUrl}#toolbar=1" style="width:100%;height:100%;border:none;background:white;"></iframe>`;
+    imageContainer.innerHTML = `<iframe src="${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0" style="width:100%;height:100%;border:none;background:white;pointer-events:none;"></iframe>`;
+    pdfAction.style.display = 'block';
+    pdfLink.href = pdfUrl;
   } else if (artwork.image_url) {
     imageContainer.innerHTML = `<img src="${artwork.image_url}" alt="${artwork.title}">`;
   } else {

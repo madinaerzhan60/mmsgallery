@@ -464,9 +464,12 @@
           <a href="#" class="lb-author-name" id="lbAuthor" style="text-decoration:none;color:var(--accent-primary);cursor:pointer;display:block;"></a>
           <div class="lb-author-sub" id="lbAuthorSub"></div>
         </div>
-        <div class="lb-actions">
-          <button class="btn btn-ghost btn-sm" id="lbLikeBtn" onclick="toggleLike()">Like</button>
-          <span id="lbLikes" style="font-size:0.8rem;color:var(--text-muted)"></span>
+        <div class="lb-actions" style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
+          <div style="display:flex;align-items:center;gap:12px">
+            <button class="btn btn-ghost btn-sm" id="lbLikeBtn" onclick="toggleLike()">Like</button>
+            <span id="lbLikes" style="font-size:0.8rem;color:var(--text-muted)"></span>
+          </div>
+          <a href="#" id="lbPdfBtn" target="_blank" class="btn btn-primary btn-sm" style="display:none;text-decoration:none;width:100%;justify-content:center;">View Full PDF in New Tab</a>
         </div>
         <div class="comments-area">
           <h4>Comments</h4>
@@ -859,12 +862,16 @@ function updateLbContent(a) {
   document.getElementById('lbAuthorSub').textContent = (a.author?.major || '') + (a.author?.year ? ' - ' + a.author.year : '');
   document.getElementById('lbLikes').textContent = (a.likes || 0) + ' ' + t('likes');
   const imgWrap = document.getElementById('lbImg');
+  const pdfBtn = document.getElementById('lbPdfBtn');
+  pdfBtn.style.display = 'none';
   
   if (isVideoArtwork(a) && a.file_url) {
     imgWrap.innerHTML = `<video class="lb-media" src="${a.file_url}" poster="${a.thumbnail_url || a.image_url || ''}" controls autoplay playsinline preload="metadata"></video>`;
   } else if (isPDFArtwork(a)) {
     const pdfUrl = a.file_url || a.image_url;
-    imgWrap.innerHTML = `<iframe src="${pdfUrl}#toolbar=0" class="lb-media" style="border:none; height:100%; width:100%; background:white;"></iframe>`;
+    imgWrap.innerHTML = `<iframe src="${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0" class="lb-media" style="border:none; height:100%; width:100%; background:white; pointer-events:none;"></iframe>`;
+    pdfBtn.style.display = 'flex';
+    pdfBtn.href = pdfUrl;
   } else {
     imgWrap.innerHTML = a.image_url
       ? `<img class="lb-media" src="${a.image_url}" alt="${a.title}">`

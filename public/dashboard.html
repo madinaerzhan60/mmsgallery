@@ -521,6 +521,12 @@ function normalizeCategoryValue(value) {
 const urlTab = new URLSearchParams(location.search).get('tab');
 if (urlTab) showTab(urlTab);
 
+function isVideoArtwork(w) {
+  const type = (w.file_type || '').toLowerCase();
+  const category = (w.category || '').toLowerCase();
+  return type === 'video' || category === 'video';
+}
+
 function isPDFArtwork(w) {
   const type = (w.file_type || '').toLowerCase();
   const fileUrl = (w.file_url || '').toLowerCase();
@@ -616,6 +622,7 @@ function renderWorks(works, containerId) {
         </div>
         <div class="work-actions">
           <button class="btn btn-ghost btn-sm" style="flex:1" onclick="openEditWorkModal('${w.uuid}')">Edit</button>
+          ${isPDFArtwork(w) ? `<a href="${w.file_url || w.image_url}" target="_blank" class="btn btn-primary btn-sm" style="flex:1;text-decoration:none;justify-content:center;display:flex;align-items:center;">View PDF</a>` : ''}
           <button class="btn btn-danger btn-sm" style="flex:1" onclick="deleteWork('${w.uuid}')">${t('delete')}</button>
         </div>
       </div>`;
@@ -634,6 +641,22 @@ function openEditWorkModal(uuid) {
   document.getElementById('editWorkDescription').value = work.description || '';
   document.getElementById('editWorkTags').value = work.tags || '';
   document.getElementById('editWorkModal').classList.add('open');
+  
+  const preview = document.getElementById('editWorkPreview');
+  const pdfBtn = document.getElementById('editWorkPdfBtn');
+  pdfBtn.style.display = 'none';
+  if (isVideoArtwork(work) && work.file_url) {
+    preview.innerHTML = `<video src="${work.file_url}" controls style="width:100%;height:250px;background:#000;border-radius:var(--radius-sm)"></video>`;
+  } else if (isPDFArtwork(work)) {
+    const url = work.file_url || work.image_url;
+    preview.innerHTML = `<iframe src="${url}#toolbar=0&navpanes=0&scrollbar=0" style="width:100%;height:250px;border:none;background:white;pointer-events:none;border-radius:var(--radius-sm)"></iframe>`;
+    pdfBtn.style.display = 'flex';
+    pdfBtn.href = url;
+  } else if (work.image_url) {
+    preview.innerHTML = `<img src="${work.image_url}" style="width:100%;height:250px;object-fit:contain;background:var(--bg-tertiary);border-radius:var(--radius-sm)">`;
+  } else {
+    preview.innerHTML = '';
+  }
 }
 
 function closeEditWorkModal() {
@@ -956,6 +979,8 @@ window.addEventListener('mms:user-updated', (event) => {
       <button class="btn btn-ghost btn-sm" onclick="closeEditWorkModal()">Close</button>
     </div>
     <div class="edit-modal-body">
+      <div id="editWorkPreview" style="margin-bottom:16px;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-tertiary);display:flex;align-items:center;justify-content:center;"></div>
+      <a href="#" id="editWorkPdfBtn" target="_blank" class="btn btn-primary btn-sm" style="display:none;width:100%;margin-bottom:16px;justify-content:center;text-decoration:none;align-items:center;">View Full PDF in New Tab</a>
       <div class="form-group">
         <label class="form-label">Title</label>
         <input id="editWorkTitle" class="form-input" type="text">
