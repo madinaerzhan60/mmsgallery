@@ -532,7 +532,8 @@ function isPDFArtwork(w) {
   const fileUrl = (w.file_url || '').toLowerCase();
   const imageUrl = (w.image_url || '').toLowerCase();
   const pdfRegex = /\.pdf(\?|$)/i;
-  return type === 'pdf' || pdfRegex.test(fileUrl) || pdfRegex.test(imageUrl);
+  const isDocPath = fileUrl.includes('/documents/') || imageUrl.includes('/documents/');
+  return type === 'pdf' || pdfRegex.test(fileUrl) || pdfRegex.test(imageUrl) || isDocPath;
 }
 
 function showTab(name) {
@@ -610,9 +611,9 @@ function renderWorks(works, containerId) {
             <div style="position:absolute;top:5px;right:5px;background:var(--accent-primary);color:white;padding:2px 6px;border-radius:4px;font-size:0.55rem;font-weight:800;">PDF</div>
            </div>`
         : (w.image_url
-          ? `<img class="work-img" src="${w.image_url}" alt="${w.title}">`
+          ? `<img class="work-img" src="${w.image_url}" alt="${w.title}" onerror="this.onerror=null; this.src='https://placehold.co/400x300/2563eb/ffffff?text=Image+Not+Found'">`
           : (w.file_type === 'video' && w.file_url
-            ? `<video class="work-img" src="${w.file_url}" ${w.thumbnail_url ? `poster="${w.thumbnail_url}"` : ''} controls preload="metadata"></video>`
+            ? `<video class="work-img" src="${w.file_url}" ${w.thumbnail_url ? `poster="${w.thumbnail_url}"` : ''} controls preload="metadata" onerror="this.outerHTML='<div class=\'work-img\' style=\'background:var(--bg-secondary);display:flex;align-items:center;justify-content:center\'>🎬</div>'"></video>`
             : `<div class="work-img" style="overflow:hidden">${artSVG(w.id, 300, 160)}</div>`))
       }
       <div class="work-body">
