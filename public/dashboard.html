@@ -426,6 +426,7 @@
                 <p style="font-size:0.85rem;margin-top:8px">JPG, PNG, GIF, WebP, MP4, MOV - Max 100MB</p>
                 <input type="file" id="fileInput2" accept="image/*,video/mp4,video/quicktime,application/pdf" onchange="handleFile2(this)">
               </div>
+              <div class="preview-wrap" id="previewWrap2">
                 <img id="previewImg2" src="" alt="">
                 <video id="previewVideo2" controls playsinline preload="metadata"></video>
                 <div id="previewPdf2" style="display:none;padding:20px;background:var(--bg-tertiary);border-radius:var(--radius-sm);text-align:center;">
@@ -433,6 +434,7 @@
                   <div style="margin-top:10px;font-weight:700;font-size:0.8rem;text-transform:uppercase;">PDF Document</div>
                 </div>
                 <p id="previewName2" style="font-size:0.85rem;color:var(--text-muted);margin-top:8px"></p>
+              </div>
             </div>
             <div id="submitError" style="color:var(--danger);font-size:0.85rem;display:none"></div>
             <button class="btn btn-primary btn-lg" style="width:100%" onclick="submitWork2()" data-i18n="submitForReview">Submit for Review</button>

@@ -114,11 +114,11 @@ router.post('/upload-url', auth, async (req, res) => {
     const kind = String(req.body.kind || '').toLowerCase();
     const mimeType = String(req.body.mimeType || 'application/octet-stream');
     const fileName = String(req.body.fileName || 'file.bin');
-    if (kind !== 'image' && kind !== 'video') {
-      return res.status(400).json({ error: 'kind must be image or video' });
+    if (kind !== 'image' && kind !== 'video' && kind !== 'pdf') {
+      return res.status(400).json({ error: 'kind must be image, video or pdf' });
     }
 
-    const folder = kind === 'video' ? 'videos' : 'images';
+    const folder = kind === 'video' ? 'videos' : (kind === 'pdf' ? 'documents' : 'images');
     const objectPath = `${folder}/${uuidv4()}${extFromMimeOrName(mimeType, fileName)}`;
     const { data, error } = await supabase.storage.from(storageBucket).createSignedUploadUrl(objectPath);
     if (error || !data?.signedUrl) {
