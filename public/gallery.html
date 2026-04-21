@@ -587,6 +587,12 @@ function isVideoArtwork(artwork) {
   return type === 'video' || category === 'video';
 }
 
+function isPDFArtwork(artwork) {
+  const type = (artwork.file_type || '').toLowerCase();
+  const fileUrl = (artwork.file_url || '').toLowerCase();
+  return type === 'pdf' || fileUrl.endsWith('.pdf');
+}
+
 function normalizeCategory(value) {
   const key = String(value || '').trim().toLowerCase();
   const map = {
@@ -608,6 +614,21 @@ function normalizeCategory(value) {
 function renderArtworkTileMedia(artwork, fallbackSeed) {
   if (isVideoArtwork(artwork) && artwork.file_url) {
     return `<video class="m-media" src="${artwork.file_url}" poster="${artwork.thumbnail_url || artwork.image_url || ''}" muted loop playsinline preload="metadata"></video>`;
+  }
+
+  if (isPDFArtwork(artwork)) {
+    return `
+      <div class="m-media" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-tertiary);gap:12px;">
+        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        <span style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">PDF Document</span>
+      </div>
+    `;
   }
 
   if (artwork.image_url) {
@@ -837,8 +858,12 @@ function updateLbContent(a) {
   document.getElementById('lbAuthorSub').textContent = (a.author?.major || '') + (a.author?.year ? ' - ' + a.author.year : '');
   document.getElementById('lbLikes').textContent = (a.likes || 0) + ' ' + t('likes');
   const imgWrap = document.getElementById('lbImg');
+  
   if (isVideoArtwork(a) && a.file_url) {
     imgWrap.innerHTML = `<video class="lb-media" src="${a.file_url}" poster="${a.thumbnail_url || a.image_url || ''}" controls autoplay playsinline preload="metadata"></video>`;
+  } else if (isPDFArtwork(a)) {
+    const pdfUrl = a.file_url || a.image_url;
+    imgWrap.innerHTML = `<iframe src="${pdfUrl}#toolbar=0" class="lb-media" style="border:none; height:100%; width:100%; background:white;"></iframe>`;
   } else {
     imgWrap.innerHTML = a.image_url
       ? `<img class="lb-media" src="${a.image_url}" alt="${a.title}">`

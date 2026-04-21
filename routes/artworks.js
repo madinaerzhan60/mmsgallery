@@ -374,7 +374,13 @@ router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'f
         : `/uploads/${req.files.file[0].filename}`;
     }
 
-    const fileType = directFileType || (file_url ? 'video' : 'image');
+    const file = req.files?.file ? req.files.file[0] : {};
+    const mimetype = file.mimetype || '';
+    let file_type = directFileType || (file_url ? 'video' : 'image');
+    if (!directFileType) {
+      if (/^video\//.test(mimetype)) file_type = 'video';
+      else if (/^application\/pdf$/.test(mimetype)) file_type = 'pdf';
+    }
     const uuid = uuidv4();
 
     const insertSqliteArtwork = () => {

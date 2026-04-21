@@ -424,13 +424,15 @@
               <div class="drop-zone" id="dropZone2" onclick="document.getElementById('fileInput2').click()">
                 <p><strong data-i18n="clickToUpload">Click to upload</strong> <span data-i18n="orDragAndDrop">or drag and drop</span></p>
                 <p style="font-size:0.85rem;margin-top:8px">JPG, PNG, GIF, WebP, MP4, MOV - Max 100MB</p>
-                <input type="file" id="fileInput2" accept="image/*,video/mp4,video/quicktime" onchange="handleFile2(this)">
+                <input type="file" id="fileInput2" accept="image/*,video/mp4,video/quicktime,application/pdf" onchange="handleFile2(this)">
               </div>
-              <div class="preview-wrap" id="previewWrap2">
                 <img id="previewImg2" src="" alt="">
                 <video id="previewVideo2" controls playsinline preload="metadata"></video>
+                <div id="previewPdf2" style="display:none;padding:20px;background:var(--bg-tertiary);border-radius:var(--radius-sm);text-align:center;">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                  <div style="margin-top:10px;font-weight:700;font-size:0.8rem;text-transform:uppercase;">PDF Document</div>
+                </div>
                 <p id="previewName2" style="font-size:0.85rem;color:var(--text-muted);margin-top:8px"></p>
-              </div>
             </div>
             <div id="submitError" style="color:var(--danger);font-size:0.85rem;display:none"></div>
             <button class="btn btn-primary btn-lg" style="width:100%" onclick="submitWork2()" data-i18n="submitForReview">Submit for Review</button>
@@ -586,11 +588,16 @@ function renderWorks(works, containerId) {
     card.className = 'work-card';
     const statusMap = { pending: 'badge-yellow', approved: 'badge-green', rejected: 'badge-red' };
     card.innerHTML = `
-      ${w.image_url
-        ? `<img class="work-img" src="${w.image_url}" alt="${w.title}">`
-        : (w.file_type === 'video' && w.file_url
-          ? `<video class="work-img" src="${w.file_url}" ${w.thumbnail_url ? `poster="${w.thumbnail_url}"` : ''} controls preload="metadata"></video>`
-          : `<div class="work-img" style="overflow:hidden">${artSVG(w.id, 300, 160)}</div>`)
+      ${w.file_type === 'pdf' || (w.file_url || '').toLowerCase().endsWith('.pdf')
+        ? `<div class="work-img" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-tertiary);gap:8px;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            <span style="font-size:0.7rem;font-weight:700;color:var(--text-secondary);">PDF</span>
+           </div>`
+        : (w.image_url
+          ? `<img class="work-img" src="${w.image_url}" alt="${w.title}">`
+          : (w.file_type === 'video' && w.file_url
+            ? `<video class="work-img" src="${w.file_url}" ${w.thumbnail_url ? `poster="${w.thumbnail_url}"` : ''} controls preload="metadata"></video>`
+            : `<div class="work-img" style="overflow:hidden">${artSVG(w.id, 300, 160)}</div>`))
       }
       <div class="work-body">
         <div class="work-title">${w.title}</div>
@@ -670,25 +677,32 @@ function handleFile2(input) {
   }
   const isImage = f.type.startsWith('image/');
   const isVideo = f.type.startsWith('video/');
-  if (!isImage && !isVideo) {
-    toast('Please upload an image or video file', 'error');
+  const isPDF = f.type === 'application/pdf';
+  if (!isImage && !isVideo && !isPDF) {
+    toast('Please upload an image, video, or PDF file', 'error');
     input.value = '';
     return;
   }
   selectedFile2 = f;
   const previewImg = document.getElementById('previewImg2');
   const previewVideo = document.getElementById('previewVideo2');
+  const previewPdf = document.getElementById('previewPdf2');
   const wrap = document.getElementById('previewWrap2');
   const name = document.getElementById('previewName2');
   const objectUrl = URL.createObjectURL(f);
+  
+  previewImg.style.display = 'none';
+  previewVideo.style.display = 'none';
+  previewPdf.style.display = 'none';
+  previewVideo.pause();
+  previewVideo.removeAttribute('src');
+
   if (isVideo) {
-    previewImg.style.display = 'none';
     previewVideo.style.display = 'block';
     previewVideo.src = objectUrl;
+  } else if (isPDF) {
+    previewPdf.style.display = 'block';
   } else {
-    previewVideo.pause();
-    previewVideo.removeAttribute('src');
-    previewVideo.style.display = 'none';
     previewImg.style.display = 'block';
     previewImg.src = objectUrl;
   }
@@ -698,7 +712,9 @@ function handleFile2(input) {
 }
 
 async function uploadSelectedFileDirect(file) {
-  const kind = file.type.startsWith('video/') ? 'video' : 'image';
+  let kind = 'image';
+  if (file.type.startsWith('video/')) kind = 'video';
+  else if (file.type === 'application/pdf') kind = 'pdf';
   const signed = await apiFetch('/api/artworks/upload-url', {
     method: 'POST',
     body: JSON.stringify({ kind, mimeType: file.type, fileName: file.name })

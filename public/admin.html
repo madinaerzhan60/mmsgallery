@@ -582,6 +582,10 @@ if (!isLoggedIn() || getUser()?.role !== 'admin') location.href = '/auth';
 
 let allArtworksData = [], allUsersData = [], currentStatus = 'all';
 
+function isPDFArtwork(a) {
+  return (a.file_type === 'pdf' || (a.file_url || '').toLowerCase().endsWith('.pdf'));
+}
+
 function showPanel(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.admin-nav-item').forEach(n => n.classList.remove('active'));
@@ -654,7 +658,17 @@ function renderArtworks(data) {
   const tbody = document.getElementById('artworksBody');
   tbody.innerHTML = data.length ? data.map(a => `
     <tr>
-      <td><div class="thumb" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">${a.image_url ? `<img src="${a.image_url}" style="width:100%;height:100%;object-fit:cover">` : (a.file_type === 'video' && a.file_url ? `<video src="${a.file_url}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;background:#000"></video>` : artSVG(a.id, 50, 40))}</div></td>
+      <td><div class="thumb" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">
+        ${isPDFArtwork(a) 
+          ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+             </div>`
+          : (a.image_url 
+            ? `<img src="${a.image_url}" style="width:100%;height:100%;object-fit:cover">` 
+            : (a.file_type === 'video' && a.file_url 
+              ? `<video src="${a.file_url}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;background:#000"></video>` 
+              : artSVG(a.id, 50, 40)))}
+      </div></td>
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span class="artwork-title-link" onclick="handleOpenModal(${JSON.stringify(a).replace(/"/g, '&quot;')})">${a.title}</span></td>
       <td style="color:var(--text-muted)">${a.author_name || '--'}</td>
       <td><span class="badge badge-gray">${a.category}</span></td>
@@ -816,10 +830,13 @@ function handleOpenModal(artwork) {
     artistLink.style.pointerEvents = 'none';
   }
   
-  // Set image
+  // Set image/video/pdf
   const imageContainer = document.getElementById('modalImageContainer');
   if (artwork.file_type === 'video' && artwork.file_url) {
     imageContainer.innerHTML = `<video src="${artwork.file_url}" poster="${artwork.thumbnail_url || artwork.image_url || ''}" controls autoplay playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;background:#000"></video>`;
+  } else if (isPDFArtwork(artwork)) {
+    const pdfUrl = artwork.file_url || artwork.image_url;
+    imageContainer.innerHTML = `<iframe src="${pdfUrl}#toolbar=0" style="width:100%;height:100%;border:none;background:white;"></iframe>`;
   } else if (artwork.image_url) {
     imageContainer.innerHTML = `<img src="${artwork.image_url}" alt="${artwork.title}">`;
   } else {
