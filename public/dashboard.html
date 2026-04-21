@@ -933,9 +933,9 @@ const dropZone2 = document.getElementById('dropZone2');
 ['dragleave', 'drop'].forEach(e => dropZone2?.addEventListener(e, ev => { ev.preventDefault(); dropZone2.classList.remove('drag'); }));
 dropZone2?.addEventListener('drop', e => {
   const f = e.dataTransfer.files[0];
-  const maxSize = 100 * 1024 * 1024;
+  const maxSize = 50 * 1024 * 1024;
   if (f && f.size > maxSize) {
-    toast('File is too large. Maximum size is 100MB.', 'error');
+    toast('File is too large. Maximum size is 50MB.', 'error');
     return;
   }
   if (f && (f.type.startsWith('image/') || f.type.startsWith('video/'))) {
