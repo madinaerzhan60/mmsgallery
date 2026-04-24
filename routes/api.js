@@ -128,6 +128,30 @@ function decorateArtworkRows(rows) {
 
 // ── Artists (public users) ─────────────────────────────────────
 router.get('/artists', (req, res) => {
+  if (usePg) {
+    (async () => {
+      const rows = await pgPool.query(`
+        SELECT
+          u.id,
+          u.uuid,
+          u.username,
+          u.name,
+          COALESCE(u.profession, u.major) AS major,
+          u.year,
+          u.bio,
+          u.avatar_url,
+          u.cover_url,
+          u.cover_gradient,
+          (SELECT COUNT(*)::int FROM artworks WHERE user_id=u.id AND status='approved') AS artwork_count
+        FROM users u
+        WHERE u.role='student'
+        ORDER BY artwork_count DESC, u.created_at DESC
+      `);
+      res.json(rows.rows);
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load artists' }));
+    return;
+  }
+
   const users = db.prepare(`
     SELECT
       u.id,
@@ -149,11 +173,85 @@ router.get('/artists', (req, res) => {
 });
 
 router.get('/artists/top', (req, res) => {
+  if (usePg) {
+    (async () => {
+      // Reuse the profileSelect logic or hardcode for performance
+      const query = `
+        SELECT
+          u.id,
+          u.uuid,
+          u.username,
+          u.name,
+          u.year,
+          u.bio,
+          u.avatar_url,
+          u.profession,
+          (SELECT COUNT(*)::int FROM artworks a WHERE a.user_id=u.id AND a.status='approved') AS works_count,
+          (SELECT COALESCE(SUM(a.likes_count), 0)::int FROM artworks a WHERE a.user_id=u.id AND a.status='approved') AS likes_count,
+          (CASE
+            WHEN u.privacy_show_follower_count = 1 THEN (SELECT COUNT(*)::int FROM follows f WHERE f.following_id=u.id)
+            ELSE 0
+          END) AS followers_count
+        FROM users u
+        WHERE u.role='student'
+        ORDER BY likes_count DESC, followers_count DESC
+        LIMIT 3
+      `;
+      const rows = await pgPool.query(query);
+      res.json(rows.rows);
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load top artists' }));
+    return;
+  }
+
   const rows = db.prepare(`${profileSelect()} ORDER BY likes_count DESC, followers_count DESC LIMIT 3`).all();
   res.json(rows);
 });
 
 router.get('/artists/:uuid', (req, res) => {
+  if (usePg) {
+    (async () => {
+      const target = await pgFindStudentByIdentifier(req.params.uuid);
+      if (!target) return res.status(404).json({ error: 'Not found' });
+      const uRes = await pgPool.query(`
+        SELECT
+          id,
+          uuid,
+          username,
+          name,
+          COALESCE(profession, major) AS major,
+          profession,
+          year,
+          bio,
+          avatar_url,
+          cover_url,
+          cover_gradient,
+          linkedin_url,
+          portfolio_url,
+          is_open_to_work,
+          created_at
+        FROM users
+        WHERE id=$1 AND role='student'
+      `, [target.id]);
+      const u = uRes.rows[0];
+      if (!u) return res.status(404).json({ error: 'Not found' });
+
+      recordProfileView(u.id, getOptionalViewerId(req));
+
+      const artworksRes = await pgPool.query(`
+        SELECT *
+        FROM artworks
+        WHERE user_id=$1 AND status='approved'
+        ORDER BY created_at DESC
+      `, [u.id]);
+      const artworks = artworksRes.rows.map(row => ({
+        ...row,
+        likes: row.likes_count || 0
+      }));
+      res.json({ ...u, artworks });
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load artist' }));
+    return;
+  }
+
   const target = findStudentByIdentifier(req.params.uuid);
   if (!target) return res.status(404).json({ error: 'Not found' });
   const u = db.prepare(`
@@ -675,6 +773,12 @@ router.post('/contact', (req, res) => {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
+  if (usePg) {
+    pgPool.query('INSERT INTO feedback (name, email, subject, message) VALUES ($1, $2, $3, $4)', 
+      [name.trim(), email.trim(), subject.trim(), message.trim()]
+    ).catch(err => console.error('[pg-feedback] Error:', err.message));
+  }
+
   db.prepare('INSERT INTO feedback (name, email, subject, message) VALUES (?, ?, ?, ?)')
     .run(name.trim(), email.trim(), subject.trim(), message.trim());
 
@@ -683,6 +787,30 @@ router.post('/contact', (req, res) => {
 
 // ── Admin ──────────────────────────────────────────────────────
 router.get('/admin/stats', adminOnly, (req, res) => {
+  if (usePg) {
+    (async () => {
+      const stats = {};
+      const uRes = await pgPool.query("SELECT COUNT(*)::int as c FROM users WHERE role='student'");
+      stats.users = uRes.rows[0].c;
+      
+      const aRes = await pgPool.query("SELECT COUNT(*)::int as c, SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END)::int as p, SUM(CASE WHEN status='approved' THEN 1 ELSE 0 END)::int as a, SUM(CASE WHEN status='rejected' THEN 1 ELSE 0 END)::int as r, COALESCE(SUM(likes_count), 0)::int as l FROM artworks");
+      stats.artworks = aRes.rows[0].c;
+      stats.pending = aRes.rows[0].p || 0;
+      stats.approved = aRes.rows[0].a || 0;
+      stats.rejected = aRes.rows[0].r || 0;
+      stats.likes = aRes.rows[0].l || 0;
+
+      const fRes = await pgPool.query("SELECT COUNT(*)::int as c FROM feedback");
+      stats.feedback = fRes.rows[0].c;
+
+      const cRes = await pgPool.query("SELECT COUNT(*)::int as c FROM comments");
+      stats.comments = cRes.rows[0].c;
+
+      res.json(stats);
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load stats' }));
+    return;
+  }
+
   res.json({
     users: db.prepare("SELECT COUNT(*) as c FROM users WHERE role='student'").get().c,
     artworks: db.prepare("SELECT COUNT(*) as c FROM artworks").get().c,
@@ -726,6 +854,36 @@ router.get('/admin/artworks', adminOnly, (req, res) => {
 });
 
 router.get('/admin/users', adminOnly, (req, res) => {
+  if (usePg) {
+    (async () => {
+      const { profession = 'all', open_to_work = 'all' } = req.query;
+      const params = [];
+      let idx = 1;
+      let query = `
+        SELECT u.*,
+          (SELECT COUNT(*)::int FROM artworks WHERE user_id=u.id) as artwork_count,
+          (SELECT COUNT(*)::int FROM follows WHERE following_id=u.id) as followers_count,
+          (SELECT COUNT(*)::int FROM follows WHERE follower_id=u.id) as following_count
+        FROM users u
+      `;
+      const where = [];
+      if (profession !== 'all') {
+        where.push(`COALESCE(u.profession, u.major)=$${idx++}`);
+        params.push(profession);
+      }
+      if (open_to_work === '1' || open_to_work === '0') {
+        where.push(`u.is_open_to_work=$${idx++}`);
+        params.push(Number(open_to_work));
+      }
+      if (where.length) query += ` WHERE ${where.join(' AND ')}`;
+      query += ' ORDER BY u.created_at DESC';
+
+      const result = await pgPool.query(query, params);
+      res.json(result.rows.map(({ password, ...u }) => u));
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load users' }));
+    return;
+  }
+
   const { profession = 'all', open_to_work = 'all' } = req.query;
   const where = [];
   const params = [];
@@ -755,16 +913,43 @@ router.get('/admin/users', adminOnly, (req, res) => {
 });
 
 router.get('/admin/feedback', adminOnly, (req, res) => {
+  if (usePg) {
+    (async () => {
+      const rows = await pgPool.query('SELECT * FROM feedback ORDER BY created_at DESC');
+      res.json(rows.rows);
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load feedback' }));
+    return;
+  }
   const rows = db.prepare('SELECT * FROM feedback ORDER BY created_at DESC').all();
   res.json(rows);
 });
 
 router.delete('/admin/feedback/:id', adminOnly, (req, res) => {
+  if (usePg) {
+    pgPool.query('DELETE FROM feedback WHERE id=$1', [Number(req.params.id)]).catch(() => {});
+  }
   db.prepare('DELETE FROM feedback WHERE id=?').run(req.params.id);
   res.json({ ok: true });
 });
 
 router.get('/admin/follows/stats', adminOnly, (req, res) => {
+  if (usePg) {
+    (async () => {
+      const rows = await pgPool.query(`
+        SELECT
+          u.uuid,
+          u.name,
+          (SELECT COUNT(*)::int FROM follows WHERE following_id=u.id) as followers,
+          (SELECT COUNT(*)::int FROM follows WHERE follower_id=u.id) as following
+        FROM users u
+        WHERE u.role='student'
+        ORDER BY followers DESC, following DESC
+      `);
+      res.json(rows.rows);
+    })().catch((error) => res.status(500).json({ error: error.message || 'Failed to load follows stats' }));
+    return;
+  }
+
   const rows = db.prepare(`
     SELECT
       u.uuid,
@@ -779,29 +964,50 @@ router.get('/admin/follows/stats', adminOnly, (req, res) => {
 });
 
 router.get('/admin/students/export.csv', adminOnly, (req, res) => {
-  const rows = db.prepare(`
-    SELECT
-      name,
-      email,
-      COALESCE(profession, major, '') as profession,
-      year,
-      is_open_to_work,
-      (SELECT COUNT(*) FROM artworks WHERE user_id=users.id AND status='approved') as works_count,
-      (SELECT COALESCE(SUM(likes_count), 0) FROM artworks WHERE user_id=users.id AND status='approved') as likes_count,
-      (SELECT COUNT(*) FROM follows WHERE following_id=users.id) as followers_count
-    FROM users
-    WHERE role='student'
-    ORDER BY created_at DESC
-  `).all();
+  (async () => {
+    let rows = [];
+    if (usePg) {
+      const result = await pgPool.query(`
+        SELECT
+          name,
+          email,
+          COALESCE(profession, major, '') as profession,
+          year,
+          is_open_to_work,
+          (SELECT COUNT(*)::int FROM artworks WHERE user_id=users.id AND status='approved') as works_count,
+          (SELECT COALESCE(SUM(likes_count), 0)::int FROM artworks WHERE user_id=users.id AND status='approved') as likes_count,
+          (SELECT COUNT(*)::int FROM follows WHERE following_id=users.id) as followers_count
+        FROM users
+        WHERE role='student'
+        ORDER BY created_at DESC
+      `);
+      rows = result.rows;
+    } else {
+      rows = db.prepare(`
+        SELECT
+          name,
+          email,
+          COALESCE(profession, major, '') as profession,
+          year,
+          is_open_to_work,
+          (SELECT COUNT(*) FROM artworks WHERE user_id=users.id AND status='approved') as works_count,
+          (SELECT COALESCE(SUM(likes_count), 0) FROM artworks WHERE user_id=users.id AND status='approved') as likes_count,
+          (SELECT COUNT(*) FROM follows WHERE following_id=users.id) as followers_count
+        FROM users
+        WHERE role='student'
+        ORDER BY created_at DESC
+      `).all();
+    }
 
-  const header = ['name', 'email', 'profession', 'year', 'is_open_to_work', 'works_count', 'likes_count', 'followers_count'];
-  const csv = [header.join(',')]
-    .concat(rows.map((r) => header.map((key) => JSON.stringify(r[key] ?? '')).join(',')))
-    .join('\n');
+    const header = ['name', 'email', 'profession', 'year', 'is_open_to_work', 'works_count', 'likes_count', 'followers_count'];
+    const csv = [header.join(',')]
+      .concat(rows.map((r) => header.map((key) => JSON.stringify(r[key] ?? '')).join(',')))
+      .join('\n');
 
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', 'attachment; filename="students.csv"');
-  res.send(csv);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="students.csv"');
+    res.send(csv);
+  })().catch((error) => res.status(500).send(error.message || 'Export failed'));
 });
 
 router.patch('/admin/artworks/:id/status', adminOnly, (req, res) => {
@@ -823,6 +1029,14 @@ router.patch('/admin/artworks/:id/status', adminOnly, (req, res) => {
 });
 
 router.delete('/admin/users/:id', adminOnly, (req, res) => {
+  if (usePg) {
+    (async () => {
+      // Find UUID first to potentially delete from Supabase Auth if we had the service role key here, 
+      // but for now delete from users table in PG.
+      await pgPool.query('DELETE FROM users WHERE id=$1 AND role!=$2', [Number(req.params.id), 'admin']);
+      // Fall through to SQLite sync
+    })().catch(() => {});
+  }
   db.prepare('DELETE FROM users WHERE id=? AND role!=?').run(req.params.id, 'admin');
   res.json({ ok: true });
 });
