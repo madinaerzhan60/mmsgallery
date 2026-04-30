@@ -926,8 +926,11 @@ router.get('/admin/feedback', adminOnly, (req, res) => {
 
 router.delete('/admin/feedback/:id', adminOnly, (req, res) => {
   if (usePg) {
-    pgPool.query('DELETE FROM feedback WHERE id=$1', [Number(req.params.id)]).catch(() => {});
+    (async () => {
+      await pgPool.query('DELETE FROM feedback WHERE id=$1', [Number(req.params.id)]);
+    })().catch(() => {});
   }
+  // Feedback doesn't have UUIDs, so we just try to delete by ID and accept it might be misaligned
   db.prepare('DELETE FROM feedback WHERE id=?').run(req.params.id);
   res.json({ ok: true });
 });
@@ -1014,10 +1017,17 @@ router.patch('/admin/artworks/:id/status', adminOnly, (req, res) => {
   if (usePg) {
     (async () => {
       const { status } = req.body;
+      const pgRow = await pgPool.query('SELECT uuid FROM artworks WHERE id=$1 LIMIT 1', [Number(req.params.id)]);
       await pgPool.query('UPDATE artworks SET status=$1 WHERE id=$2', [status, Number(req.params.id)]);
       try {
-        db.prepare('UPDATE artworks SET status=? WHERE id=?').run(status, req.params.id);
-      } catch {}
+        if (pgRow.rows[0]) {
+          db.prepare('UPDATE artworks SET status=? WHERE uuid=?').run(status, pgRow.rows[0].uuid);
+        } else {
+          db.prepare('UPDATE artworks SET status=? WHERE id=?').run(status, req.params.id);
+        }
+      } catch (e) {
+        console.warn('[sync] failed to update sqlite artwork status', e.message);
+      }
       return res.json({ ok: true });
     })().catch((error) => res.status(500).json({ error: error.message || 'Failed to update status' }));
     return;
@@ -1031,11 +1041,17 @@ router.patch('/admin/artworks/:id/status', adminOnly, (req, res) => {
 router.delete('/admin/users/:id', adminOnly, (req, res) => {
   if (usePg) {
     (async () => {
-      // Find UUID first to potentially delete from Supabase Auth if we had the service role key here, 
-      // but for now delete from users table in PG.
+      const pgRow = await pgPool.query('SELECT uuid FROM users WHERE id=$1 LIMIT 1', [Number(req.params.id)]);
       await pgPool.query('DELETE FROM users WHERE id=$1 AND role!=$2', [Number(req.params.id), 'admin']);
-      // Fall through to SQLite sync
+      if (pgRow.rows[0]) {
+        try {
+          db.prepare('DELETE FROM users WHERE uuid=? AND role!=?').run(pgRow.rows[0].uuid, 'admin');
+        } catch (e) {
+          console.warn('[sync] failed to delete user from sqlite', e.message);
+        }
+      }
     })().catch(() => {});
+    return res.json({ ok: true });
   }
   db.prepare('DELETE FROM users WHERE id=? AND role!=?').run(req.params.id, 'admin');
   res.json({ ok: true });
