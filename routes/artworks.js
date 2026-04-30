@@ -498,10 +498,25 @@ router.delete('/:uuid', auth, (req, res) => {
   if (usePg) {
     (async () => {
       const a = (await pgPool.query('SELECT * FROM artworks WHERE uuid=$1 LIMIT 1', [req.params.uuid])).rows[0];
-      if (!a) return res.status(404).json({ error: 'Not found' });
-      if (a.user_id !== req.user.id && req.user.role !== 'admin')
+      const sqliteA = db.prepare('SELECT * FROM artworks WHERE uuid=?').get(req.params.uuid);
+
+      if (!a && !sqliteA) return res.status(404).json({ error: 'Not found' });
+
+      const permCheck = a || sqliteA;
+      if (permCheck.user_id !== req.user.id && req.user.role !== 'admin') {
         return res.status(403).json({ error: 'Forbidden' });
-      await pgPool.query('DELETE FROM artworks WHERE uuid=$1', [req.params.uuid]);
+      }
+
+      if (a) {
+        await pgPool.query('DELETE FROM artworks WHERE uuid=$1', [req.params.uuid]);
+      }
+      if (sqliteA) {
+        try {
+          db.prepare('DELETE FROM artworks WHERE uuid=?').run(req.params.uuid);
+        } catch (e) {
+          console.warn('[sync] failed to delete from sqlite fallback', e.message);
+        }
+      }
       return res.json({ ok: true });
     })().catch((error) => res.status(500).json({ error: error.message || 'Failed to delete artwork' }));
     return;

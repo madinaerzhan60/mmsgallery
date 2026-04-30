@@ -422,6 +422,12 @@ router.delete('/account', auth, async (req, res) => {
     }
 
     await pgPool.query('DELETE FROM users WHERE uuid=$1', [req.user.uuid]);
+    try {
+      const db = require('../database');
+      db.prepare('DELETE FROM users WHERE uuid=?').run(req.user.uuid);
+    } catch(e) {
+      console.warn('[sync] failed to delete user from sqlite fallback', e.message);
+    }
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ error: error.message || 'Failed to delete account' });
