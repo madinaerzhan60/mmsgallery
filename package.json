@@ -11,7 +11,8 @@
     "backfill:profiles": "node backfill-profiles.js",
     "backfill:usernames": "node backfill-usernames.js",
     "migrate:supabase": "node scripts/migrate-to-supabase.js",
-    "migrate:users:to:supabase": "node scripts/migrate-users-to-supabase.js"
+    "migrate:users:to:supabase": "node scripts/migrate-users-to-supabase.js",
+    "sync": "node sync.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.101.1",
